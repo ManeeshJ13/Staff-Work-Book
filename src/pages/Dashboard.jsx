@@ -31,7 +31,7 @@ const Dashboard = () => {
           fontSize: { xs: "2.5rem", md: "3.5rem" } // Responsive font
         }}
       >
-        DASHBOARD
+        D V J & ASSOCIATES
       </Typography>
 
       <Button

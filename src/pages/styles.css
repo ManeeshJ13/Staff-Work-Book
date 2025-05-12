@@ -1,0 +1,71 @@
+/* styles.css */
+
+/* Apply a background color to the entire body */
+body {
+  background-color: lightcyan;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+h1, h2 {
+  color: #333;
+  padding: 0;
+  font-size: 2.5rem;
+}
+
+.error-message {
+  color: red;
+  background-color: #ffeeee;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ffcccc;
+  margin: 10px 0;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+
+/* Style for links */
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Container for buttons */
+.button-container {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20px;
+}
+
+/* Style for buttons */
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: larger;
+  transition: background-color 0.3s ease;
+  margin-left: 20px; /* Removed individual button margin */
+  margin-top: 20px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import SignIn from './pages/SignIn';
 import DataEntry from './pages/DataEntry';
@@ -12,7 +12,7 @@ import AddStaff from './pages/admin/AddStaff';
 import StaffDashboard from './pages/StaffDashboard';
 import DataEdit from './pages/DataEdit';
 
-
+//added to do something to vercel cache
 const App=()=> {
   return (
     <BrowserRouter>

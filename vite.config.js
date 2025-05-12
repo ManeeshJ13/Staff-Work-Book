@@ -6,7 +6,13 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
-      external: ['react-router-dom'], // Externalize `react-router-dom`
+      input: 'src/main.jsx', // Replace this with your actual entry point if different
+      external: ['react-router-dom'], // Make sure it is externalized properly
+      output: {
+        globals: {
+          'react-router-dom': 'ReactRouterDOM', // For global window usage if required
+        },
+      },
     },
   },
 });

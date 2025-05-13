@@ -61,8 +61,8 @@ const SignIn = () => {
     console.log("Available staff:", staffList);
 
     const admin_cred = {
-      username: "Jameskutty Antony",
-      password: "admin123"
+      username: "admin",
+      password: "admin"
     };
 
     // Check for admin credentials

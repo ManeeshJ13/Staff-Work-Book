@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
@@ -40,7 +40,9 @@ import {
   Card,
   CardContent,
   CardActions,
-  Autocomplete
+  Autocomplete,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   Home as HomeIcon,
@@ -58,6 +60,8 @@ import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-picker
 
 const DataEdit = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const staffName = localStorage.getItem('currentStaff');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -74,14 +78,14 @@ const DataEdit = () => {
   const [financialYears, setFinancialYears] = useState(['2023', '2024', '2025']);
 
   // Get the date for 7 days ago
-  const getOneWeekAgo = () => {
+  const getOneWeekAgo = useCallback(() => {
     const date = new Date();
     date.setDate(date.getDate() - 7);
     return date;
-  };
+  }, []);
 
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -89,7 +93,7 @@ const DataEdit = () => {
       month: 'short', 
       day: 'numeric' 
     });
-  };
+  }, []);
 
   // Fetch client and assignment lists from Supabase
   useEffect(() => {
@@ -171,7 +175,7 @@ const DataEdit = () => {
     };
 
     fetchWorkEntries();
-  }, [staffName, navigate]);
+  }, [staffName, navigate, getOneWeekAgo]);
 
   // Navigate to dashboard if not signed in
   useEffect(() => {
@@ -181,12 +185,12 @@ const DataEdit = () => {
   }, [staffName, navigate]);
 
   // Handle expanding/collapsing entry details
-  const handleExpandClick = (id) => {
+  const handleExpandClick = useCallback((id) => {
     setExpandedId(expandedId === id ? null : id);
-  };
+  }, [expandedId]);
 
   // Open edit dialog for an entry
-  const handleEditClick = (entry) => {
+  const handleEditClick = useCallback((entry) => {
     // Parse the date and times for the form
     let parsedEntry = {
       ...entry,
@@ -206,7 +210,7 @@ const DataEdit = () => {
     
     setCurrentEntry(parsedEntry);
     setEditDialogOpen(true);
-  };
+  }, []);
 
   // Parse time string (HH:MM) to Date object
   const parseTimeString = (timeStr) => {
@@ -231,7 +235,7 @@ const DataEdit = () => {
   };
 
   // Handle time changes in the form
-  const handleTimeChange = (field, value) => {
+  const handleTimeChange = useCallback((field, value) => {
     const updatedEntry = {
       ...currentEntry,
       [field]: value
@@ -249,19 +253,19 @@ const DataEdit = () => {
     }
     
     setCurrentEntry(updatedEntry);
-  };
+  }, [currentEntry]);
 
   // Handle hours change
-  const handleHoursChange = (e) => {
+  const handleHoursChange = useCallback((e) => {
     setCurrentEntry({
       ...currentEntry,
       hours: Number(e.target.value),
       hasUserEditedHours: true // Flag to track if user has manually edited hours
     });
-  };
+  }, [currentEntry]);
 
   // Format time for display
-  const formatTime = (timeStr) => {
+  const formatTime = useCallback((timeStr) => {
     if (!timeStr) return 'N/A';
     
     // Try to parse the time string into hours and minutes
@@ -278,23 +282,23 @@ const DataEdit = () => {
       minute: '2-digit',
       hour12: true 
     });
-  };
+  }, []);
 
   // Format time for database
-  const formatTimeForDB = (date) => {
+  const formatTimeForDB = useCallback((date) => {
     if (!date) return null;
     return date instanceof Date ? 
       `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` : 
       null;
-  };
+  }, []);
   
   // Format date for database
-  const formatDateForDB = (date) => {
+  const formatDateForDB = useCallback((date) => {
     if (!date) return null;
     return date instanceof Date ? 
       `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}` : 
       null;
-  };
+  }, []);
 
   // Handle form submission to update the entry
   const handleUpdateEntry = async () => {
@@ -370,35 +374,101 @@ const DataEdit = () => {
         onClose={() => setEditDialogOpen(false)}
         fullWidth
         maxWidth="md"
+        fullScreen={isMobile} // Full screen on mobile devices
+        PaperProps={{
+          sx: {
+            borderRadius: isMobile ? 0 : 1,
+            height: isMobile ? '100%' : 'auto',
+            overflowY: 'auto'
+          }
+        }}
       >
         <DialogTitle>
           <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="h6">Edit Work Entry</Typography>
-            <IconButton onClick={() => setEditDialogOpen(false)}>
+            <Typography variant="h6">
+              {isMobile ? "Edit Entry" : "Edit Work Entry"}
+            </Typography>
+            <IconButton 
+              onClick={() => setEditDialogOpen(false)}
+              edge="end"
+              aria-label="close"
+              sx={{ 
+                padding: isMobile ? 1 : 0.5,
+                '&:active': {
+                  backgroundColor: theme.palette.action.selected
+                }
+              }}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent 
+          dividers
+          sx={{ 
+            paddingTop: isMobile ? 2 : 3,
+            overflowY: 'auto',
+            '-webkit-overflow-scrolling': 'touch' // Improves scrolling on iOS
+          }}
+        >
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Grid container spacing={3}>
+            <Grid container spacing={isMobile ? 2 : 3}>
               {/* Date and Presence */}
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <DatePicker
                   label="Date"
                   value={currentEntry.date}
                   onChange={(newDate) => setCurrentEntry({...currentEntry, date: newDate})}
-                  renderInput={(params) => <TextField {...params} fullWidth required />}
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      fullWidth 
+                      required 
+                      size={isMobile ? "small" : "medium"} 
+                      sx={{ mb: isMobile ? 1 : 0 }}
+                    />
+                  )}
+                  PopperProps={{
+                    placement: isMobile ? 'bottom' : 'bottom-start',
+                    modifiers: [{
+                      name: 'preventOverflow',
+                      enabled: true,
+                      options: {
+                        boundary: document.body
+                      }
+                    }]
+                  }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
+              <Grid item xs={12} sm={6}>
+                <FormControl 
+                  fullWidth
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    alignItems: isMobile ? 'flex-start' : 'center' 
+                  }}
+                >
                   <FormControlLabel
                     control={
                       <Switch
                         checked={currentEntry.presence}
                         onChange={(e) => setCurrentEntry({...currentEntry, presence: e.target.checked})}
                         color="primary"
+                        sx={{ 
+                          '& .MuiSwitch-switchBase': {
+                            padding: 0.5,
+                          },
+                          '& .MuiSwitch-thumb': {
+                            width: isMobile ? 16 : 20,
+                            height: isMobile ? 16 : 20,
+                          },
+                          '&:active': {
+                            '& .MuiSwitch-thumb': {
+                              width: isMobile ? 17 : 21,
+                            },
+                          }
+                        }}
                       />
                     }
                     label={currentEntry.presence ? "Present" : "Absent"}
@@ -407,25 +477,27 @@ const DataEdit = () => {
               </Grid>
 
               {/* Client and Assignment */}
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <Autocomplete
                   options={clientList}
                   value={currentEntry.client}
                   onChange={(event, newValue) => {
                     setCurrentEntry({...currentEntry, client: newValue || ''});
                   }}
+                  disablePortal={isMobile} // Better mobile experience
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label="Client"
                       required={currentEntry.presence}
                       fullWidth
+                      size={isMobile ? "small" : "medium"}
                       InputProps={{
                         ...params.InputProps,
                         startAdornment: (
                           <>
                             <InputAdornment position="start">
-                              <SearchIcon />
+                              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
                             </InputAdornment>
                             {params.InputProps.startAdornment}
                           </>
@@ -434,27 +506,34 @@ const DataEdit = () => {
                     />
                   )}
                   disabled={!currentEntry.presence}
+                  ListboxProps={{
+                    style: {
+                      maxHeight: isMobile ? '40vh' : '25vh'
+                    }
+                  }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} sm={6}>
                 <Autocomplete
                   options={assignmentList}
                   value={currentEntry.assignment}
                   onChange={(event, newValue) => {
                     setCurrentEntry({...currentEntry, assignment: newValue || ''});
                   }}
+                  disablePortal={isMobile} // Better mobile experience
                   renderInput={(params) => (
                     <TextField
                       {...params}
                       label="Assignment"
                       required={currentEntry.presence}
                       fullWidth
+                      size={isMobile ? "small" : "medium"}
                       InputProps={{
                         ...params.InputProps,
                         startAdornment: (
                           <>
                             <InputAdornment position="start">
-                              <SearchIcon />
+                              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
                             </InputAdornment>
                             {params.InputProps.startAdornment}
                           </>
@@ -463,12 +542,21 @@ const DataEdit = () => {
                     />
                   )}
                   disabled={!currentEntry.presence}
+                  ListboxProps={{
+                    style: {
+                      maxHeight: isMobile ? '40vh' : '25vh'
+                    }
+                  }}
                 />
               </Grid>
 
               {/* Financial Year and Completion */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth disabled={!currentEntry.presence}>
+              <Grid item xs={12} sm={6}>
+                <FormControl 
+                  fullWidth 
+                  disabled={!currentEntry.presence}
+                  size={isMobile ? "small" : "medium"}
+                >
                   <InputLabel id="financial-year-label">Financial Year</InputLabel>
                   <Select
                     labelId="financial-year-label"
@@ -476,17 +564,32 @@ const DataEdit = () => {
                     onChange={(e) => setCurrentEntry({...currentEntry, financialYear: Number(e.target.value)})}
                     label="Financial Year"
                     required={currentEntry.presence}
+                    MenuProps={{
+                      PaperProps: {
+                        style: {
+                          maxHeight: isMobile ? 200 : 300
+                        }
+                      }
+                    }}
                   >
                     {financialYears.map(year => (
-                      <MenuItem key={year} value={Number(year)}>
+                      <MenuItem 
+                        key={year} 
+                        value={Number(year)}
+                        dense={isMobile}
+                      >
                         {year}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth disabled={!currentEntry.presence}>
+              <Grid item xs={12} sm={6}>
+                <FormControl 
+                  fullWidth 
+                  disabled={!currentEntry.presence}
+                  size={isMobile ? "small" : "medium"}
+                >
                   <InputLabel id="completion-label">Completion Status</InputLabel>
                   <Select
                     labelId="completion-label"
@@ -494,41 +597,88 @@ const DataEdit = () => {
                     onChange={(e) => setCurrentEntry({...currentEntry, completion: e.target.value === "true"})}
                     label="Completion Status"
                     required={currentEntry.presence}
+                    MenuProps={{
+                      PaperProps: {
+                        style: {
+                          maxHeight: isMobile ? 200 : 300
+                        }
+                      }
+                    }}
                   >
-                    <MenuItem value="true">Completed</MenuItem>
-                    <MenuItem value="false">In Progress</MenuItem>
+                    <MenuItem value="true" dense={isMobile}>Completed</MenuItem>
+                    <MenuItem value="false" dense={isMobile}>In Progress</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
 
               {/* Time Tracking */}
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={4}>
                 <TimePicker
                   label="Start Time"
                   value={currentEntry.startTime}
                   onChange={(newTime) => handleTimeChange('startTime', newTime)}
-                  renderInput={(params) => <TextField {...params} fullWidth required={currentEntry.presence} />}
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      fullWidth 
+                      required={currentEntry.presence} 
+                      size={isMobile ? "small" : "medium"}
+                    />
+                  )}
                   disabled={!currentEntry.presence}
+                  PopperProps={{
+                    placement: isMobile ? 'bottom' : 'bottom-start',
+                    modifiers: [{
+                      name: 'preventOverflow',
+                      enabled: true,
+                      options: {
+                        boundary: document.body
+                      }
+                    }]
+                  }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={4}>
                 <TimePicker
                   label="End Time"
                   value={currentEntry.endTime}
                   onChange={(newTime) => handleTimeChange('endTime', newTime)}
-                  renderInput={(params) => <TextField {...params} fullWidth required={currentEntry.presence} />}
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      fullWidth 
+                      required={currentEntry.presence} 
+                      size={isMobile ? "small" : "medium"}
+                    />
+                  )}
                   disabled={!currentEntry.presence}
+                  PopperProps={{
+                    placement: isMobile ? 'bottom' : 'bottom-start',
+                    modifiers: [{
+                      name: 'preventOverflow',
+                      enabled: true,
+                      options: {
+                        boundary: document.body
+                      }
+                    }]
+                  }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   label="Hours Worked"
                   type="number"
-                  inputProps={{ step: "0.1", min: "0" }}
+                  inputProps={{ 
+                    step: "0.1", 
+                    min: "0",
+                    inputMode: 'decimal', // Brings up numeric keyboard on mobile
+                    pattern: '[0-9]*(\.[0-9])?'
+                  }}
                   value={currentEntry.hours}
                   onChange={handleHoursChange}
                   required={currentEntry.presence}
                   fullWidth
+                  size={isMobile ? "small" : "medium"}
                   disabled={!currentEntry.presence}
                   helperText={`Calculated: ${currentEntry.calculatedHours} hrs`}
                 />
@@ -539,12 +689,18 @@ const DataEdit = () => {
                 <TextField
                   label="Work Description"
                   multiline
-                  rows={3}
+                  rows={isMobile ? 2 : 3}
                   value={currentEntry.workDescription || ''}
                   onChange={(e) => setCurrentEntry({...currentEntry, workDescription: e.target.value})}
                   fullWidth
+                  size={isMobile ? "small" : "medium"}
                   required={currentEntry.presence}
                   disabled={!currentEntry.presence}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                    }
+                  }}
                 />
               </Grid>
 
@@ -553,21 +709,39 @@ const DataEdit = () => {
                 <TextField
                   label="Remarks (Optional)"
                   multiline
-                  rows={2}
+                  rows={isMobile ? 2 : 2}
                   value={currentEntry.remarks || ''}
                   onChange={(e) => setCurrentEntry({...currentEntry, remarks: e.target.value})}
                   fullWidth
+                  size={isMobile ? "small" : "medium"}
                   disabled={!currentEntry.presence}
                   placeholder="Add any additional comments or notes here"
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontSize: isMobile ? '0.875rem' : '1rem',
+                    }
+                  }}
                 />
               </Grid>
             </Grid>
           </LocalizationProvider>
         </DialogContent>
-        <DialogActions>
+        <DialogActions
+          sx={{
+            padding: isMobile ? 2 : 1.5,
+            justifyContent: 'space-between',
+            flexDirection: isMobile ? 'column-reverse' : 'row',
+            gap: isMobile ? 1 : 0
+          }}
+        >
           <Button 
             onClick={() => setEditDialogOpen(false)} 
             color="primary"
+            sx={{ 
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? 1 : 'auto',
+              borderRadius: 1
+            }}
           >
             Cancel
           </Button>
@@ -577,6 +751,11 @@ const DataEdit = () => {
             variant="contained"
             startIcon={<SaveIcon />}
             disabled={isSubmitting}
+            sx={{ 
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? 1 : 'auto',
+              borderRadius: 1
+            }}
           >
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </Button>
@@ -590,22 +769,24 @@ const DataEdit = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+    <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 4 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2 }}>
         {/* Header */}
         <Box sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h4" component="h1" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
             Edit Work History
           </Typography>
           
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 1, sm: 0 } }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Staff: {staffName}
             </Typography>
             <Chip 
               label="Past 7 Days"
               color="primary"
               variant="outlined"
+              size="small"
+              sx={{ mt: { xs: 1, sm: 0 } }}
             />
           </Box>
         </Box>
@@ -642,42 +823,42 @@ const DataEdit = () => {
         {/* Work Entries List */}
         {!loading && workEntries.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="h6" color="textSecondary">
+            <Typography variant="h6" color="textSecondary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               No work entries found for the past week
             </Typography>
           </Box>
         )}
 
         {!loading && workEntries.length > 0 && (
-          <List sx={{ width: '100%' }}>
+          <List sx={{ width: '100%', p: 0 }}>
             {workEntries.map((entry) => (
               <Card key={entry.id} sx={{ mb: 2, borderLeft: entry.Presence ? 'none' : '4px solid #ff9800' }}>
-                <CardContent>
-                  <Grid container spacing={2}>
+                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                  <Grid container spacing={{ xs: 1, sm: 2 }}>
                     <Grid item xs={12} sm={3}>
                       <Typography variant="subtitle2" color="textSecondary">
                         Date
                       </Typography>
-                      <Typography variant="body1">
+                      <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
                         {formatDate(entry.Date)}
                       </Typography>
                     </Grid>
                     
                     {entry.Presence ? (
                       <>
-                        <Grid item xs={12} sm={3}>
+                        <Grid item xs={6} sm={3}>
                           <Typography variant="subtitle2" color="textSecondary">
                             Client
                           </Typography>
-                          <Typography variant="body1">
+                          <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
                             {entry.Client || 'N/A'}
                           </Typography>
                         </Grid>
-                        <Grid item xs={12} sm={3}>
+                        <Grid item xs={6} sm={3}>
                           <Typography variant="subtitle2" color="textSecondary">
                             Assignment
                           </Typography>
-                          <Typography variant="body1">
+                          <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
                             {entry.Assignment || 'N/A'}
                           </Typography>
                         </Grid>
@@ -713,23 +894,23 @@ const DataEdit = () => {
                         sx={{ mt: 1 }}
                       >
                         {expandedId === entry.id ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                        <Typography variant="button" sx={{ ml: 1 }}>
+                        <Typography variant="button" sx={{ ml: 1, display: { xs: 'none', sm: 'inline' } }}>
                           {expandedId === entry.id ? "Hide Details" : "Show Details"}
                         </Typography>
                       </IconButton>
                       
                       <Collapse in={expandedId === entry.id} timeout="auto" unmountOnExit>
-                        <Box sx={{ mt: 2, ml: 1 }}>
-                          <Grid container spacing={2}>
-                            <Grid item xs={12} sm={4}>
+                        <Box sx={{ mt: 2, ml: { xs: 0, sm: 1 } }}>
+                          <Grid container spacing={{ xs: 1, sm: 2 }}>
+                            <Grid item xs={6} sm={4}>
                               <Typography variant="subtitle2" color="textSecondary">
                                 Time
                               </Typography>
-                              <Typography variant="body2">
+                              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
                                 {formatTime(entry.Start_Time)} - {formatTime(entry.End_Time)}
                               </Typography>
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={6} sm={4}>
                               <Typography variant="subtitle2" color="textSecondary">
                                 Hours
                               </Typography>
@@ -749,7 +930,7 @@ const DataEdit = () => {
                               <Typography variant="subtitle2" color="textSecondary">
                                 Work Description
                               </Typography>
-                              <Typography variant="body2">
+                              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
                                 {entry.Work_Done || 'No description provided'}
                               </Typography>
                             </Grid>
@@ -758,7 +939,7 @@ const DataEdit = () => {
                                 <Typography variant="subtitle2" color="textSecondary">
                                   Remarks
                                 </Typography>
-                                <Typography variant="body2">
+                                <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
                                   {entry.Remark}
                                 </Typography>
                               </Grid>
@@ -769,7 +950,7 @@ const DataEdit = () => {
                     </>
                   )}
                 </CardContent>
-                <CardActions>
+                <CardActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 2 } }}>
                   <Button
                     startIcon={<EditIcon />}
                     color="primary"
@@ -785,11 +966,13 @@ const DataEdit = () => {
         )}
         
         {/* Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', gap: 2, mt: 3 }}>
           <Button
             variant="outlined"
             startIcon={<HomeIcon />}
             onClick={() => navigate('/staffdashboard')}
+            fullWidth={false}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Back to Dashboard
           </Button>
@@ -797,6 +980,8 @@ const DataEdit = () => {
             variant="contained"
             color="primary"
             onClick={() => navigate('/dataentry')}
+            fullWidth={false}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Add New Entry
           </Button>

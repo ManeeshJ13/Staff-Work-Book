@@ -18,25 +18,19 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  Divider,
   Switch,
   FormControlLabel,
   InputAdornment,
   Stepper,
   Step,
   StepLabel,
-  IconButton,
-  Collapse,
-  Autocomplete,
-  List,
-  ListItem,
-  ListItemText
+  useMediaQuery,
+  useTheme,
+  Autocomplete
 } from '@mui/material';
 import {
   Home as HomeIcon,
   Search as SearchIcon,
-  KeyboardArrowDown as KeyboardArrowDownIcon,
-  KeyboardArrowUp as KeyboardArrowUpIcon,
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
@@ -45,9 +39,12 @@ import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-picker
 
 const DataEntry = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const staffName = localStorage.getItem('currentStaff');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState(0); // 0-based for Material-UI Stepper
+  const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
   
   // Lists that will be fetched from Supabase
@@ -63,12 +60,13 @@ const DataEntry = () => {
     client: '',
     assignment: '',
     workDescription: '',
-    remarks: '', // Added remarks field
+    remarks: '',
     financialYear: 2024, 
     startTime: new Date(new Date().setHours(9, 0, 0, 0)),
     endTime: new Date(new Date().setHours(17, 0, 0, 0)),
     hours: 8,
-    calculatedHours: 8, // New field to store calculated hours
+    calculatedHours: 8,
+    hasUserEditedHours: false,
     completion: true
   });
 
@@ -92,7 +90,7 @@ const DataEntry = () => {
         // Process clients
         const sortedClients = clientData
           .map(item => item.Client_Name)
-          .filter(Boolean) // Remove null/undefined
+          .filter(Boolean)
           .sort((a, b) => a.localeCompare(b));
         
         setClientList(sortedClients);
@@ -100,7 +98,7 @@ const DataEntry = () => {
         // Process assignments
         const sortedAssignments = assignmentData
           .map(item => item.Assignment_Name)
-          .filter(Boolean) // Remove null/undefined
+          .filter(Boolean)
           .sort((a, b) => a.localeCompare(b));
         
         setAssignmentList(sortedAssignments);
@@ -124,7 +122,6 @@ const DataEntry = () => {
     }
   }, [staffName, navigate]);
 
-
   const handleAttendanceSubmit = async (e) => {
     e.preventDefault();
 
@@ -135,7 +132,7 @@ const DataEntry = () => {
         client: '',
         assignment: '',
         workDescription: '',
-        remarks: '', // Reset remarks field
+        remarks: '',
         financialYear: 0,
         startTime: null,
         endTime: null,
@@ -160,7 +157,6 @@ const DataEntry = () => {
     const hoursDifference = Math.abs(formData.hours - formData.calculatedHours);
     
     // If difference is greater than 0.5 hours (except for the exact 0.5 difference which is allowed)
-    // This is where we check the 0.5 hour tolerance - we ignore exactly 0.5 difference
     if (hoursDifference > 0.5 && hoursDifference !== 0.5) {
       setError(`Hours entered (${formData.hours}) don't match the calculated hours (${formData.calculatedHours}). 
                 Please correct your entries. Note: A difference of exactly 0.5 hours is acceptable.`);
@@ -247,32 +243,16 @@ const DataEntry = () => {
         Client: formData.presence ? formData.client : null,
         Assignment: formData.presence ? formData.assignment : null,
         Work_Done: formData.presence ? formData.workDescription : null,
-        Remark: formData.presence ? formData.remarks : null, // Added remarks field
+        Remark: formData.presence ? formData.remarks : null,
         Financial_Year: formData.presence ? Number(formData.financialYear) : 0,
         Start_Time: formData.presence ? formatTimeForDB(formData.startTime) : null,
         End_Time: formData.presence ? formatTimeForDB(formData.endTime) : null,
         Hours: formData.presence ? Number(formData.hours) : 0,
         Completion: formData.presence ? Boolean(formData.completion) : null,
-        TimeStamp: currentTimestamp // Add the timestamp field
+        TimeStamp: currentTimestamp
       };
       
       console.log('Submitting Data to Supabase:', entryData);
-
-      console.log('Data types:', {
-        Name: typeof entryData.Name,
-        Date: typeof entryData.Date,
-        Presence: typeof entryData.Presence,
-        Client: typeof entryData.Client,
-        Assignment: typeof entryData.Assignment,
-        Work_Done: typeof entryData.Work_Done,
-        Remark: typeof entryData.Remarks, // Added remarks field type
-        Financial_Year: typeof entryData.Financial_Year,
-        Start_Time: typeof entryData.Start_Time,
-        End_Time: typeof entryData.End_Time,
-        Hours: typeof entryData.Hours,
-        Completion: typeof entryData.Completion,
-        Timestamp: typeof entryData.Timestamp
-      });
 
       // Try fetching the table structure first to verify connection
       const { data: tableInfo, error: tableError } = await supabase
@@ -319,30 +299,101 @@ const DataEntry = () => {
 
   const steps = ['Attendance', 'Work Details'];
 
+  // Determine container width based on device
+  const getContainerWidth = () => {
+    if (isMobile) return 'xs';
+    if (isTablet) return 'sm';
+    return 'md';
+  };
+
+  // Determine input size based on device
+  const getInputSize = () => {
+    return isMobile ? 'small' : 'medium';
+  };
+
+  // Responsive spacing values
+  const spacing = {
+    containerPadding: isMobile ? 2 : 3,
+    paperPadding: isMobile ? 2 : 4,
+    gridSpacing: 2,
+    marginBottom: isMobile ? 2 : 3
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+      <Container 
+        maxWidth={getContainerWidth()}
+        sx={{ 
+          py: spacing.containerPadding,
+          px: isMobile ? 1 : spacing.containerPadding,
+          minHeight: '100vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center',
+          width: '100%'
+        }}
+      >
+        <Paper 
+          elevation={3} 
+          sx={{ 
+            p: spacing.paperPadding, 
+            borderRadius: 2,
+            width: '100%',
+            maxWidth: '100%'
+          }}
+        >
           {/* Header */}
-          <Box sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h4" component="h1" gutterBottom>
+          <Box sx={{ mb: spacing.marginBottom, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Typography 
+              variant={isMobile ? "h5" : "h4"} 
+              component="h1" 
+              gutterBottom 
+              align="center"
+              sx={{ fontWeight: 'bold' }}
+            >
               Data Entry Portal
             </Typography>
             
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' }, 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <Typography 
+                variant="h6"
+                sx={{ 
+                  textAlign: { xs: 'center', sm: 'left' }, 
+                  width: '100%',
+                  fontSize: { xs: '1rem', sm: '1.25rem' }
+                }}
+              >
                 Staff: {staffName}
               </Typography>
               <Chip 
                 label={`Step ${step + 1} of ${steps.length}`}
                 color={step === 0 ? "primary" : "success"}
                 variant="outlined"
+                size={isMobile ? "small" : "medium"}
+                sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}
               />
             </Box>
           </Box>
           
-          {/* Stepper */}
-          <Stepper activeStep={step} sx={{ mb: 4 }}>
+          {/* Stepper - Adapts to screen width */}
+          <Stepper 
+            activeStep={step} 
+            sx={{ 
+              mb: spacing.marginBottom,
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              '& .MuiStepLabel-label': {
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }
+            }}
+            orientation={isMobile ? "vertical" : "horizontal"}
+          >
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -352,14 +403,14 @@ const DataEntry = () => {
           
           {/* Error message */}
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert severity="error" sx={{ mb: spacing.marginBottom }}>
               {error}
             </Alert>
           )}
 
           {/* Loading indicator */}
           {loading && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: spacing.marginBottom }}>
               <CircularProgress />
             </Box>
           )}
@@ -367,16 +418,22 @@ const DataEntry = () => {
           {/* Step 1: Attendance */}
           {step === 0 && (
             <form onSubmit={handleAttendanceSubmit}>
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
+              <Grid container spacing={spacing.gridSpacing}>
+                <Grid item xs={12}>
                   <DatePicker
                     label="Date"
                     value={formData.date}
                     onChange={(newDate) => setFormData({...formData, date: newDate})}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
+                    slotProps={{ 
+                      textField: { 
+                        fullWidth: true, 
+                        required: true,
+                        size: getInputSize()
+                      } 
+                    }}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
                   <FormControl fullWidth>
                     <FormControlLabel
                       control={
@@ -384,18 +441,31 @@ const DataEntry = () => {
                           checked={formData.presence}
                           onChange={(e) => setFormData({...formData, presence: e.target.checked})}
                           color="primary"
+                          size={getInputSize()}
                         />
                       }
-                      label={formData.presence ? "Present" : "Absent"}
+                      label={
+                        <Typography variant={isMobile ? "body2" : "body1"}>
+                          {formData.presence ? "Present" : "Absent"}
+                        </Typography>
+                      }
                     />
                   </FormControl>
                 </Grid>
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: { xs: 'column', sm: 'row' }, 
+                    justifyContent: 'space-between', 
+                    gap: 2,
+                    mt: 2 
+                  }}>
                     <Button
                       variant="outlined"
                       startIcon={<HomeIcon />}
                       onClick={() => navigate('/staffdashboard')}
+                      fullWidth={isMobile}
+                      size={getInputSize()}
                     >
                       Home
                     </Button>
@@ -404,10 +474,9 @@ const DataEntry = () => {
                       variant="contained"
                       color="primary"
                       disabled={loading || isSubmitting}
-                      sx={{
-                        ml:1,
-                        height:40 
-                      }}
+                      fullWidth={isMobile}
+                      size={getInputSize()}
+                      sx={{ mt: { xs: 1, sm: 0 } }}
                     >
                       {!formData.presence && isSubmitting ? 'Submitting...' : 'Continue'}
                     </Button>
@@ -420,9 +489,9 @@ const DataEntry = () => {
           {/* Step 2: Work Details */}
           {step === 1 && (
             <form onSubmit={handleDetailSubmit}>
-              <Grid container spacing={2}>
+              <Grid container spacing={spacing.gridSpacing}>
                 {/* Client selection */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
                   <Autocomplete
                     options={clientList}
                     value={formData.client}
@@ -434,16 +503,14 @@ const DataEntry = () => {
                         {...params}
                         label="Client"
                         required
-                        sx={{
-                          width:'250px'
-                        }}
                         fullWidth
+                        size={getInputSize()}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
                             <>
                               <InputAdornment position="start">
-                                <SearchIcon />
+                                <SearchIcon fontSize={isMobile ? "small" : "medium"} />
                               </InputAdornment>
                               {params.InputProps.startAdornment}
                             </>
@@ -452,11 +519,12 @@ const DataEntry = () => {
                       />
                     )}
                     disabled={loading}
+                    disablePortal // Better performance on mobile
                   />
                 </Grid>
 
                 {/* Assignment selection */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12}>
                   <Autocomplete
                     options={assignmentList}
                     value={formData.assignment}
@@ -468,16 +536,14 @@ const DataEntry = () => {
                         {...params}
                         label="Assignment"
                         required
-                        sx={{
-                          width:'250px'
-                        }}
                         fullWidth
+                        size={getInputSize()}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
                             <>
                               <InputAdornment position="start">
-                                <SearchIcon />
+                                <SearchIcon fontSize={isMobile ? "small" : "medium"} />
                               </InputAdornment>
                               {params.InputProps.startAdornment}
                             </>
@@ -486,11 +552,12 @@ const DataEntry = () => {
                       />
                     )}
                     disabled={loading}
+                    disablePortal // Better performance on mobile
                   />
                 </Grid>
 
-                {/* Financial Year */}
-                <Grid item xs={12} md={6}>
+                {/* Financial Year & Completion Status in one row on larger screens */}
+                <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
                     <InputLabel id="financial-year-label">Financial Year</InputLabel>
                     <Select
@@ -499,9 +566,7 @@ const DataEntry = () => {
                       onChange={(e) => setFormData({...formData, financialYear: Number(e.target.value)})}
                       label="Financial Year"
                       required
-                      sx={{
-                        width:'150px'
-                      }}
+                      size={getInputSize()}
                     >
                       {financialYears.map(year => (
                         <MenuItem key={year} value={Number(year)}>
@@ -512,8 +577,7 @@ const DataEntry = () => {
                   </FormControl>
                 </Grid>
 
-                {/* Completion Status */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
                     <InputLabel id="completion-label">Completion Status</InputLabel>
                     <Select
@@ -522,10 +586,7 @@ const DataEntry = () => {
                       onChange={(e) => setFormData({...formData, completion: e.target.value === "true"})}
                       label="Completion Status"
                       required
-                      sx={{
-                        width:'150px',
-                        mr:'20px'
-                      }}
+                      size={getInputSize()}
                     >
                       <MenuItem value="true">Completed</MenuItem>
                       <MenuItem value="false">In Progress</MenuItem>
@@ -533,32 +594,36 @@ const DataEntry = () => {
                   </FormControl>
                 </Grid>
 
-                {/* Time Tracking */}
-                <Grid item xs={12} md={4}>
+                {/* Time Tracking - Side by side on larger screens */}
+                <Grid item xs={12} sm={6}>
                   <TimePicker
                     label="Start Time"
                     value={formData.startTime}
                     onChange={(newTime) => handleTimeChange('startTime', newTime)}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
-                    sx={{
-                      width:'150px',
-                      mr:'20px'
+                    slotProps={{ 
+                      textField: { 
+                        fullWidth: true, 
+                        required: true,
+                        size: getInputSize()
+                      } 
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} sm={6}>
                   <TimePicker
                     label="End Time"
                     value={formData.endTime}
                     onChange={(newTime) => handleTimeChange('endTime', newTime)}
-                    renderInput={(params) => <TextField {...params} fullWidth required />}
-                    sx={{
-                      width:'155px',
-                      mr:'20px'
+                    slotProps={{ 
+                      textField: { 
+                        fullWidth: true, 
+                        required: true,
+                        size: getInputSize()
+                      } 
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12}>
                   <TextField
                     label="Hours Worked"
                     type="number"
@@ -566,10 +631,8 @@ const DataEntry = () => {
                     value={formData.hours}
                     onChange={handleHoursChange}
                     required
-                    sx={{
-                      width:'120px'
-                    }}
                     fullWidth
+                    size={getInputSize()}
                   />
                 </Grid>
 
@@ -578,65 +641,59 @@ const DataEntry = () => {
                   <TextField
                     label="Work Description"
                     multiline
-                    rows={3}
+                    rows={isMobile ? 2 : 3}
                     value={formData.workDescription}
                     onChange={(e) => setFormData({...formData, workDescription: e.target.value})}
                     fullWidth
                     required
-                    sx={{
-                      width:'345px'
-                    }}
+                    size={getInputSize()}
                   />
                 </Grid>
-                
                 
                 {/* Remarks field */}
                 <Grid item xs={12}>
                   <TextField
-                    id="remarks-field"
-                    name="remarks"
                     label="Remarks (Optional)"
                     multiline
-                    rows={3}
+                    rows={isMobile ? 2 : 3}
                     value={formData.remarks || ''}
                     onChange={(e) => setFormData({...formData, remarks: e.target.value})}
                     fullWidth
                     variant="outlined"
                     placeholder="Add any additional comments or notes here"
-                    sx={{ 
-                      mb: 2,
-                    width:'325px'
-                   }}
+                    size={getInputSize()}
                   />
                 </Grid>
 
                 {/* Form Actions */}
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    justifyContent: 'space-between', 
+                    mt: 2,
+                    gap: { xs: 2, sm: 2 }
+                  }}>
                     <Button
                       variant="outlined"
                       startIcon={<ArrowBackIcon />}
                       onClick={() => setStep(0)}
-                      sx={{
-                        width:'120px'
-                      }}
+                      fullWidth={isMobile}
+                      size={getInputSize()}
                     >
                       Back
                     </Button>
-                    <Box>
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        color="success"
-                        startIcon={<SaveIcon />}
-                        disabled={isSubmitting || loading}
-                        sx={{
-                          ml:'160px'
-                        }}
-                      >
-                        {isSubmitting ? 'Submitting...' : 'Submit Entry'}
-                      </Button>
-                    </Box>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="success"
+                      startIcon={<SaveIcon />}
+                      disabled={isSubmitting || loading}
+                      fullWidth={isMobile}
+                      size={getInputSize()}
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Entry'}
+                    </Button>
                   </Box>
                 </Grid>
               </Grid>

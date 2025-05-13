@@ -34,6 +34,17 @@ const Dashboard = () => {
         D V J & ASSOCIATES
       </Typography>
 
+      <Typography
+        variant="h2"
+        sx={{
+          mt:1,
+          fontSize:{xs:"1.5rem",md:"2.5rem"},
+          mb:2
+        }}
+        >
+          ASSIGNMENT MANAGEMENT SYSTEM
+        </Typography>
+
       <Button
         component={Link}
         to="/signin"

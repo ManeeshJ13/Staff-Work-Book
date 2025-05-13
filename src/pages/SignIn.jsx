@@ -7,15 +7,15 @@ import { supabase } from "../lib/supabaseClient";
 import {
   Box,
   Button,
-  Card,
-  CardContent,
   CircularProgress,
   Container,
   TextField,
   Typography,
   Alert,
   Paper,
-  Avatar
+  Avatar,
+  useMediaQuery,
+  useTheme
 } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
 
@@ -26,6 +26,8 @@ const SignIn = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Fetch staff list from Supabase on component mount
   useEffect(() => {
@@ -88,97 +90,174 @@ const SignIn = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
+    <Container 
+      component="main" 
+      maxWidth="xs"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        px: { xs: 2, sm: 3 }, // Responsive padding
+        overflow: 'hidden' // Prevent horizontal scrolling
+      }}
+    >
+      <Paper
+        elevation={3}
         sx={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center"
+          width: '100%',
+          maxWidth: 400,
+          p: { xs: 2, sm: 4 }, // Responsive padding
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          borderRadius: 2,
+          boxShadow: isMobile 
+            ? '0 4px 6px rgba(0,0,0,0.1)' 
+            : '0 10px 15px rgba(0,0,0,0.1)'
         }}
       >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            width: "100%"
+        <Avatar sx={{ 
+          mb: 2, 
+          bgcolor: "primary.main",
+          width: { xs: 48, sm: 56 },
+          height: { xs: 48, sm: 56 }
+        }}>
+          <LockOutlined fontSize={isMobile ? 'medium' : 'large'} />
+        </Avatar>
+        
+        <Typography 
+          component="h1" 
+          variant={isMobile ? 'h6' : 'h5'} 
+          sx={{ 
+            mb: 3, 
+            textAlign: 'center',
+            fontSize: { xs: '1.25rem', sm: '1.5rem' }
           }}
         >
-          <Avatar sx={{ mb: 2, bgcolor: "primary.main" }}>
-            <LockOutlined />
-          </Avatar>
-          <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
-            Staff Sign In
-          </Typography>
+          Staff Sign In
+        </Typography>
 
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-              <CircularProgress />
-              <Typography sx={{ ml: 2, color: "primary.main" }}>
-                Loading staff data...
-              </Typography>
-            </Box>
-          ) : (
-            <Box component="form" onSubmit={handleSignIn} sx={{ mt: 1, width: "100%" }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="name"
-                label="Name"
-                name="name"
-                autoComplete="name"
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                helperText="Your password is your name"
-              />
+        {loading ? (
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            my: 4 
+          }}>
+            <CircularProgress size={isMobile ? 40 : 60} />
+            <Typography 
+              sx={{ 
+                mt: 2, 
+                color: "primary.main",
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              Loading staff data...
+            </Typography>
+          </Box>
+        ) : (
+          <Box 
+            component="form" 
+            onSubmit={handleSignIn} 
+            sx={{ 
+              width: '100%', 
+              mt: 1 
+            }}
+          >
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="name"
+              label="Name"
+              name="name"
+              autoComplete="name"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }
+              }}
+              InputLabelProps={{
+                sx: {
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }
+              }}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              helperText="Your password is your name"
+              sx={{
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }
+              }}
+              InputLabelProps={{
+                sx: {
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }
+              }}
+            />
 
-              {error && (
-                <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ mt: 3, mb: 2, py: 1.5 }}
-                disabled={loading}
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  mt: 2, 
+                  mb: 2,
+                  '& .MuiAlert-message': {
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                  }
+                }}
               >
-                Sign In
-              </Button>
-              
-              <Button
-                component={Link}
-                to="/"
-                fullWidth
-                variant="outlined"
-                sx={{ mt: 1, mb: 2 }}
-              >
-                Back to Home
-              </Button>
-            </Box>
-          )}
-        </Paper>
-      </Box>
+                {error}
+              </Alert>
+            )}
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ 
+                mt: 3, 
+                mb: 2, 
+                py: { xs: 1, sm: 1.5 },
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+              disabled={loading}
+            >
+              Sign In
+            </Button>
+            
+            <Button
+              component={Link}
+              to="/"
+              fullWidth
+              variant="outlined"
+              sx={{ 
+                mt: 1, 
+                mb: 2,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              Back to Home
+            </Button>
+          </Box>
+        )}
+      </Paper>
     </Container>
   );
 };

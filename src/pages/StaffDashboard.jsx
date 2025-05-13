@@ -1,4 +1,4 @@
-import React from "react";  
+import React from "react";
 import { useNavigate } from "react-router-dom"; 
 import { Link } from "react-router-dom";    
 import {
@@ -6,83 +6,135 @@ import {
     Typography,
     Button,
     Container,
-    Paper
+    Paper,
+    useMediaQuery,
+    useTheme,
+    Stack
 } from "@mui/material";
-import { lightBlue } from "@mui/material/colors";
-
 
 const StaffDashboard = () => {
-    return(
-        <Paper
-        elevation={3}
-        sx={{
-            padding:4,
-            display:"flex",
-            flexDirection:"column",
-            alignItems:"center",
-            width:"100%"
-        }}>
-            <Typography
-            variant="h1"
-            sx={{
-                mb:4,
-                fontSize:{xs:"2.5rem",md:"3.5rem"}
-            }}>
-                STAFF DASHBOARD
-            </Typography>
-            
-            <Box
-            sx={{
-                display:"flex",
-                gap:2,
-                justifyContent:"center",
-                margin:2,
-            }}>
-                <Button
-                component={Link}
-                to="/dataentry"
-                variant="contained"
-                size="large"
-                sz={{
-                    px:4,
-                    py:1.5,
-                    fontSize:"1.1rem",
-                    textTransform:"none"
-                }}>
-                Enter Data
-                </Button>
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const navigate = useNavigate();
 
-                <Button
-                component={Link}
-                to="/dataedit"
-                variant="contained"
-                size="large"
-                sz={{
-                    px:4,
-                    py:1.5,
-                    fontSize:"1.1rem",
-                    textTransform:"none"
-                }}>
-                Edit Data
-                </Button>
-            </Box>
-            <Box>
-                <Button
-                component={Link}
-                to="/signin"
-                variant="contained"
-                size="large"
-                sz={{
-                    px:4,
-                    py:1.5,
-                    fontSize:"1.1rem",
-                    textTransform:"none"
-                }}>
-                Logout
-                </Button>
-            </Box>
+    const handleLogout = () => {
+        // Clear any stored authentication data
+        localStorage.removeItem('currentStaff');
+        localStorage.removeItem('isAdmin');
+        navigate('/signin');
+    };
 
-        </Paper>
+    return (
+        <Container 
+            maxWidth="xs"
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '100vh',
+                px: { xs: 2, sm: 3 },
+                overflow: 'hidden'
+            }}
+        >
+            <Paper
+                elevation={3}
+                sx={{
+                    width: '100%',
+                    maxWidth: 500,
+                    padding: { xs: 2, sm: 4 },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    borderRadius: 2,
+                    boxShadow: isMobile 
+                        ? '0 4px 6px rgba(0,0,0,0.1)' 
+                        : '0 10px 15px rgba(0,0,0,0.1)'
+                }}
+            >
+                <Typography
+                    variant="h1"
+                    sx={{
+                        mb: { xs: 3, sm: 4 },
+                        fontSize: { 
+                            xs: "2rem", 
+                            sm: "2.5rem", 
+                            md: "3rem" 
+                        },
+                        textAlign: 'center',
+                        fontWeight: 600
+                    }}
+                >
+                    STAFF DASHBOARD
+                </Typography>
+                
+                <Stack 
+                    spacing={{ xs: 2, sm: 3 }}
+                    sx={{ 
+                        width: '100%',
+                        alignItems: 'center'
+                    }}
+                >
+                    <Stack 
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={{ xs: 2, sm: 2 }}
+                        sx={{ 
+                            width: '100%', 
+                            justifyContent: 'center' 
+                        }}
+                    >
+                        <Button
+                            component={Link}
+                            to="/dataentry"
+                            variant="contained"
+                            fullWidth={isMobile}
+                            sx={{
+                                px: { xs: 2, sm: 4 },
+                                py: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                textTransform: 'none',
+                                maxWidth: { sm: 200 }
+                            }}
+                        >
+                            Enter Data
+                        </Button>
+
+                        <Button
+                            component={Link}
+                            to="/dataedit"
+                            variant="contained"
+                            fullWidth={isMobile}
+                            sx={{
+                                px: { xs: 2, sm: 4 },
+                                py: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                textTransform: 'none',
+                                maxWidth: { sm: 200 }
+                            }}
+                        >
+                            Edit Data
+                        </Button>
+                    </Stack>
+
+                    <Button
+                        onClick={handleLogout}
+                        variant="contained"
+                        color="error"
+                        fullWidth={isMobile}
+                        sx={{
+                            px: { xs: 2, sm: 4 },
+                            py: { xs: 1, sm: 1.5 },
+                            fontSize: { xs: '0.875rem', sm: '1rem' },
+                            textTransform: 'none',
+                            maxWidth: { sm: 200 },
+                            mt: { xs: 2, sm: 3 }
+                        }}
+                    >
+                        Logout
+                    </Button>
+                </Stack>
+            </Paper>
+        </Container>
     );
 };
 

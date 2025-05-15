@@ -15,14 +15,14 @@ import {
     CircularProgress
 } from "@mui/material"
 
-const AddClient = () => {
+const AddAssignment = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
     const navigate = useNavigate();
     
     // State for form fields
-    const [clientName, setClientName] = useState('');
+    const [assignmentName, setAssignmentName] = useState('');
     
     // State for form handling
     const [error, setError] = useState('');
@@ -38,7 +38,7 @@ const AddClient = () => {
     
     // Reset the form 
     const resetForm = () => {
-        setClientName('');
+        setAssignmentName('');
     };
 
     const handleSubmit = async (e) => {
@@ -50,29 +50,29 @@ const AddClient = () => {
         
         try {
             // Validate inputs
-            const trimmedName = clientName.trim();
+            const trimmedName = assignmentName.trim();
             if (!trimmedName) {
-                throw new Error('Client name cannot be empty');
+                throw new Error('Assignment name cannot be empty');
             }
 
             // Check for duplicates in Supabase (case insensitive)
-            const { data: existingClients, error: queryError } = await supabase
-                .from('Clients List')
-                .select('Client_Name')
-                .ilike('Client_Name', trimmedName);
+            const { data: existingAssignment, error: queryError } = await supabase
+                .from('Assignments List')
+                .select('Assignment_Name')
+                .ilike('Assignment_Name', trimmedName);
 
             if (queryError) {
                 console.error('Supabase query error:', queryError);
-                throw new Error(`Failed to check existing clients: ${queryError.message}`);
+                throw new Error(`Failed to check existing assignments: ${queryError.message}`);
             }
             
-            if (existingClients && existingClients.length > 0) {
-                throw new Error('Client already exists in the list');
+            if (existingAssignment && existingAssignment.length > 0) {
+                throw new Error('Assignment already exists in the list');
             }
             
             // Find the highest ID currently in the table
-            const { data: clientsWithMaxId, error: maxIdError } = await supabase
-                .from('Clients List')
+            const { data: assignmentsWithMaxId, error: maxIdError } = await supabase
+                .from('Assignments List')
                 .select('id')
                 .order('id', { ascending: false })
                 .limit(1);
@@ -83,28 +83,28 @@ const AddClient = () => {
             }
             
             // Calculate the next ID (max + 1) or start with 1 if table is empty
-            const nextId = clientsWithMaxId && clientsWithMaxId.length > 0 
-                ? parseInt(clientsWithMaxId[0].id) + 1 
+            const nextId = assignmentsWithMaxId && assignmentsWithMaxId.length > 0 
+                ? parseInt(assignmentsWithMaxId[0].id) + 1 
                 : 1;
                 
-            setDebugInfo(`Found highest ID: ${clientsWithMaxId && clientsWithMaxId.length > 0 ? clientsWithMaxId[0].id : 'none'}\nCreating new client with ID: ${nextId}`);
-            console.log(`Creating new client with ID: ${nextId}`);
+            setDebugInfo(`Found highest ID: ${assignmentsWithMaxId && assignmentsWithMaxId.length > 0 ? assignmentsWithMaxId[0].id : 'none'}\nCreating new assignment with ID: ${nextId}`);
+            console.log(`Creating new assignment with ID: ${nextId}`);
             
             // Add to Supabase with the explicitly set next ID
-            const { data: insertedClient, error: insertError } = await supabase
-                .from('Clients List')
+            const { data: insertedAssignment, error: insertError } = await supabase
+                .from('Assignments List')
                 .insert([{ 
                     id: nextId,
-                    Client_Name: trimmedName,
+                    Assignment_Name: trimmedName,
                 }])
                 .select();
 
             if (insertError) {
                 console.error('Supabase insert error:', insertError);
-                throw new Error(`Failed to add client: ${insertError.message || 'Database error'}`);
+                throw new Error(`Failed to add assignment: ${insertError.message || 'Database error'}`);
             }
             
-            console.log('Successfully inserted client:', insertedClient);
+            console.log('Successfully inserted assignment:', insertedAssignment);
 
             // Success state
             setSuccess(true);
@@ -113,7 +113,7 @@ const AddClient = () => {
             // Redirect after 1.5 seconds
             setTimeout(() => navigate('/admindash'), 1500);
         } catch (err) {
-            console.error('Error adding client:', err);
+            console.error('Error adding assignment:', err);
             setError(err.message);
             setShowDebug(true);
         } finally {
@@ -181,7 +181,7 @@ const AddClient = () => {
                             flexGrow: isMobile ? 1 : 0
                         }}
                     >
-                        ADD NEW CLIENT
+                        ADD NEW ASSIGNMENT
                     </Typography>
                     
                     {!isMobile && <Box sx={{ width: 64 }} />}
@@ -207,7 +207,7 @@ const AddClient = () => {
                             fontSize: { xs: '0.875rem', md: '1rem' }
                         }}
                     >
-                        Client added successfully! Redirecting...
+                        Assignment added successfully! Redirecting...
                     </Alert>
                 )}
                 
@@ -227,7 +227,7 @@ const AddClient = () => {
                 )}
 
                 <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-                    {/* Client Name Field */}
+                    {/* Assignment Name Field */}
                     <Box sx={{ mb: { xs: 2, md: 3 } }}>
                         <Typography
                             variant="subtitle1"
@@ -238,15 +238,15 @@ const AddClient = () => {
                                 fontSize: { xs: '0.95rem', md: '1rem' }
                             }}
                         >
-                            Client Name*
+                            Assignment Name*
                         </Typography>
                         <TextField
-                            id="clientName"
-                            placeholder="Enter client name"
+                            id="assignmentName"
+                            placeholder="Enter Assignment name"
                             variant="outlined"
                             fullWidth
-                            value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
+                            value={assignmentName}
+                            onChange={(e) => setAssignmentName(e.target.value)}
                             required
                             disabled={isSubmitting}
                             size={isMobile ? "small" : "medium"}
@@ -309,10 +309,10 @@ const AddClient = () => {
                             {isSubmitting ? (
                                 <>
                                     <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                                    Adding Client...
+                                    Adding Assignment...
                                 </>
                             ) : (
-                                'Add Client'
+                                'Add Assignment'
                             )}
                         </Button>
                     </Box>
@@ -322,4 +322,4 @@ const AddClient = () => {
     );
 };
 
-export default AddClient;
+export default AddAssignment;

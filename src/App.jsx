@@ -3,14 +3,14 @@ import Dashboard from './pages/Dashboard';
 import SignIn from './pages/SignIn';
 import DataEntry from './pages/DataEntry';
 import AdminDashboard from './pages/AdminDashboard';
-import ClientsSummary from './pages/admin/ClientsSummary';
 import DailySummary from './pages/admin/DailySummary';
-import StaffSummary from './pages/admin/StaffSummary';
 import AddClientPage from './pages/admin/AddClientPage';
-import ClientAssignment from './pages/admin/ClientAssignment';
 import AddStaff from './pages/admin/AddStaff';
 import StaffDashboard from './pages/StaffDashboard';
 import DataEdit from './pages/DataEdit';
+import AddAssignment from './pages/admin/AddAssignment';
+import StaffReport from './pages/admin/StaffReport';
+import AssignmentReport from './pages/admin/AssignmentReport';
 
 //added to do something to vercel cache
 const App=()=> {
@@ -23,12 +23,12 @@ const App=()=> {
         <Route path="/staffdashboard" element={<StaffDashboard/>}/>
         <Route path="/dataedit" element={<DataEdit/>}/>
         <Route path="/admindash" element={<AdminDashboard/>}/>
-        <Route path="/admin/ClientsSummary" element={<ClientsSummary/>}/>
         <Route path="/admin/DailySummary" element={<DailySummary/>}/>
-        <Route path="/admin/StaffSummary" element={<StaffSummary/>}/>
         <Route path="/admin/AddClientPage" element={<AddClientPage/>}/>
-        <Route path="/admin/ClientAssignment" element={<ClientAssignment/>}/>
         <Route path="/admin/AddStaff" element={<AddStaff/>}/>"
+        <Route path="/admin/AddAssignment" element={<AddAssignment/>}/>"
+        <Route path="/admin/StaffReport" element={<StaffReport/>}/>"
+        <Route path="/admin/AssignmentReport" element={<AssignmentReport/>}/>"
       </Routes>
     </BrowserRouter>
   );

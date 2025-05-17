@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import withAuth from "../../components/withAuth";
 // Material-UI imports
 import { 
   Table, 
@@ -21,6 +22,9 @@ import {
   TextField
 } from '@mui/material';
 
+function AdminPage(){
+    return <div>Admin-Only Content</div>;
+}
 const DailySummary = () => {
   const [staffWorkData, setStaffWorkData] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
@@ -235,4 +239,4 @@ const DailySummary = () => {
   );
 };
 
-export default DailySummary;
+export default withAuth(DailySummary);

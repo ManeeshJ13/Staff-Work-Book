@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import withAuth from "../../components/withAuth";
 // Material-UI imports
 import { 
   Table, 
@@ -34,6 +35,10 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import TodayIcon from '@mui/icons-material/Today';
 import HomeIcon from '@mui/icons-material/Home';
+
+function AdminPage(){
+    return <div>Admin-Only Content</div>;
+}
 
 const AssignmentReport = () => {
   const theme = useTheme();
@@ -531,4 +536,4 @@ const AssignmentReport = () => {
   );
 };
 
-export default AssignmentReport;
+export default withAuth(AssignmentReport);

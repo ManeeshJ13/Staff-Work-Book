@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../../lib/supabaseClient';
+import withAuth from '../../../components/withAuth';
 
 import {
     Box,
@@ -15,6 +16,10 @@ import {
     CircularProgress,
     Snackbar
 } from "@mui/material"
+
+function AdminPage(){
+    return <div>Admin-Only Content</div>;
+}
 
 const AddStaff = () => {
     const theme = useTheme();
@@ -170,12 +175,12 @@ const AddStaff = () => {
                     {!isMobile && (
                         <Button 
                             component={Link}
-                            to="/admindash"
+                            to="/admin/StaffManagement"
                             variant='contained'
                             color='primary'
                             sx={{ visibility: isMobile ? 'hidden' : 'visible' }}
                         >
-                            Home
+                            BACK
                         </Button>
                     )}
                     
@@ -374,4 +379,4 @@ const AddStaff = () => {
     );
 };
 
-export default AddStaff
+export default withAuth(AddStaff);

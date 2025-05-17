@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import withAuth from "../../components/withAuth";
 import {
   Table,
   TableBody,
@@ -37,9 +38,14 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
 import { useTheme } from "@mui/material/styles";
 
+function AdminPage(){
+    return <div>Admin-Only Content</div>;
+}
+
 const StaffReport = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down("sm"));
   
   // State for raw data
   const [staffWorkData, setStaffWorkData] = useState([]);
@@ -112,6 +118,15 @@ const StaffReport = () => {
       
       setAssignmentList(uniqueAssignments.sort());
       setFinancialYearList(uniqueFinancialYears.sort());
+      
+      // Calculate total hours
+      let hoursSum = 0;
+      filteredByPresence.forEach(work => {
+        if (work.Hours && !isNaN(work.Hours)) {
+          hoursSum += work.Hours;
+        }
+      });
+      setTotalHours(hoursSum);
     } catch (err) {
       console.error("Error fetching staff work data:", err);
       throw err;
@@ -219,15 +234,23 @@ const StaffReport = () => {
     
     // Calculate total cost and hours
     let costSum = 0;
+    let hoursSum = 0;
     
     filtered.forEach(work => {
+      // Calculate cost
       const cost = calculateTotalCostValue(work.Name, work.Hours);
       if (!isNaN(cost)) {
         costSum += cost;
       }
+      
+      // Calculate hours
+      if (work.Hours && !isNaN(work.Hours)) {
+        hoursSum += work.Hours;
+      }
     });
     
     setTotalCost(costSum);
+    setTotalHours(hoursSum);
   };
 
   // Handle filter clearing
@@ -312,22 +335,34 @@ const StaffReport = () => {
       <Grid container spacing={2}>
         {/* Date Range Filters */}
         <Grid item xs={12} sm={6} md={3} lg={2}>
-          <DatePicker
-            label="From Date"
-            value={dateFrom}
-            onChange={setDateFrom}
-            renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-            maxDate={dateTo}
-          />
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="From Date"
+              value={dateFrom}
+              onChange={setDateFrom}
+              renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+              maxDate={dateTo}
+              inputFormat="MM/dd/yyyy"
+              slotProps={{
+                textField: { fullWidth: true, size: "small" }
+              }}
+            />
+          </LocalizationProvider>
         </Grid>
         <Grid item xs={12} sm={6} md={3} lg={2}>
-          <DatePicker
-            label="To Date"
-            value={dateTo}
-            onChange={setDateTo}
-            renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-            minDate={dateFrom}
-          />
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DatePicker
+              label="To Date"
+              value={dateTo}
+              onChange={setDateTo}
+              renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+              minDate={dateFrom}
+              inputFormat="MM/dd/yyyy"
+              slotProps={{
+                textField: { fullWidth: true, size: "small" }
+              }}
+            />
+          </LocalizationProvider>
         </Grid>
         
         {/* Staff Selection */}
@@ -336,9 +371,7 @@ const StaffReport = () => {
             <Autocomplete
               size="small"
               multiple
-              sx={{
-                width:'200px'
-              }}
+              fullWidth
               value={selectedStaff}
               onChange={(event, newValue) => setSelectedStaff(newValue)}
               options={staffList}
@@ -355,9 +388,7 @@ const StaffReport = () => {
             <Autocomplete
               size="small"
               multiple
-              sx={{
-                width:'200px'
-              }}
+              fullWidth
               value={selectedClients}
               onChange={(event, newValue) => setSelectedClients(newValue)}
               options={clientList}
@@ -374,9 +405,7 @@ const StaffReport = () => {
             <Autocomplete
               size="small"
               multiple
-              sx={{
-                width:'200px',
-              }}
+              fullWidth
               value={selectedAssignments}
               onChange={(event, newValue) => setSelectedAssignments(newValue)}
               options={assignmentList}
@@ -393,9 +422,7 @@ const StaffReport = () => {
             <Autocomplete
               size="small"
               multiple
-              sx={{
-                width:'160px'
-              }}
+              fullWidth
               value={selectedFinancialYears}
               onChange={(event, newValue) => setSelectedFinancialYears(newValue)}
               options={financialYearList}
@@ -420,12 +447,12 @@ const StaffReport = () => {
   );
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <Box sx={{ maxWidth: "100vw", overflow: "hidden" }}>
       <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "1400px", mx: "auto" }}>
         {/* Header with title and home button */}
         <AppBar position="static" color="default" elevation={0} sx={{ mb: 2 }}>
-          <Toolbar>
-            <Typography variant="h5" component="h1" fontWeight="bold" sx={{ flexGrow: 1 }}>
+          <Toolbar sx={{ flexWrap: 'wrap' }}>
+            <Typography variant="h5" component="h1" fontWeight="bold" sx={{ flexGrow: 1, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
               Staff Report
             </Typography>
             {isMobile && (
@@ -433,6 +460,7 @@ const StaffReport = () => {
                 edge="end" 
                 color="primary" 
                 onClick={() => setFilterDrawerOpen(true)}
+                sx={{ mr: 1 }}
               >
                 <FilterListIcon />
               </IconButton>
@@ -442,7 +470,7 @@ const StaffReport = () => {
               to="/admindash" 
               variant="contained" 
               color="primary"
-              sx={{ ml: 2 }}
+              size={isSmallMobile ? "small" : "medium"}
             >
               Home
             </Button>
@@ -452,7 +480,9 @@ const StaffReport = () => {
         {/* Filter section - only shown on desktop */}
         {!isMobile && (
           <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-            <FiltersComponent />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <FiltersComponent />
+            </LocalizationProvider>
           </Paper>
         )}
 
@@ -468,7 +498,7 @@ const StaffReport = () => {
            !dateTo ? (
             <Typography variant="body2" color="text.secondary">None</Typography>
           ) : (
-            <>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
               {dateFrom && (
                 <Chip 
                   label={`From: ${dateFrom.toLocaleDateString()}`} 
@@ -524,24 +554,30 @@ const StaffReport = () => {
               <IconButton size="small" onClick={clearAllFilters} title="Clear all filters">
                 <ClearIcon fontSize="small" />
               </IconButton>
-            </>
+            </Box>
           )}
         </Box>
 
-        {/* Summary Card showing total cost and hours */}
+        {/* Summary Cards showing total cost and hours */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={4}>
             <Card raised sx={{ bgcolor: "primary.light", color: "white" }}>
               <CardContent>
-                <Typography variant="p">Total Cost: </Typography>
-                <Typography variant="p">₹{totalCost.toFixed(2)}</Typography>
+                <Typography variant="body1">Total Cost: ₹{totalCost.toFixed(2)}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card raised sx={{ bgcolor: "primary.light", color: "white" }}>
+              <CardContent>
+                <Typography variant="body1">Total Hours: {totalHours.toFixed(2)}</Typography>
               </CardContent>
             </Card>
           </Grid>
           <Grid item xs={12} md={4}>
             <Card>
-              <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center",height:'25px' }}>
-                <Typography variant="p">
+              <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Typography variant="body1">
                   Showing {filteredData.length} entries
                 </Typography>
                 <Tooltip title="Export to CSV">
@@ -579,82 +615,84 @@ const StaffReport = () => {
             </Button>
           </Box>
         ) : (
-          <TableContainer component={Paper} elevation={2}>
-            <Table size="small" aria-label="staff report table">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "primary.light" }}>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>}
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Time</TableCell>}
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredData.map((work, index) => (
-                  <TableRow 
-                    key={index}
-                    hover
-                    sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
-                  >
-                    <TableCell>{work.Name || "N/A"}</TableCell>
-                    <TableCell>{formatDate(work.Date)}</TableCell>
-                    {!isMobile && <TableCell>{work.Client || "N/A"}</TableCell>}
-                    <TableCell sx={{ maxWidth: isMobile ? 100 : 'none', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      <Tooltip title={work.Assignment || "N/A"}>
-                        <span>{work.Assignment || "N/A"}</span>
-                      </Tooltip>
-                    </TableCell>
-                    {!isMobile && (
-                      <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        <Tooltip title={work.Work_Done || "N/A"}>
-                          <span>{work.Work_Done || "N/A"}</span>
+          <Box sx={{ width: '100%', overflowX: 'auto' }}>
+            <TableContainer component={Paper} elevation={2} sx={{ maxWidth: '100%' }}>
+              <Table size="small" aria-label="staff report table">
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "primary.light" }}>
+                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
+                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>}
+                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
+                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
+                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
+                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Time</TableCell>}
+                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
+                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
+                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredData.map((work, index) => (
+                    <TableRow 
+                      key={index}
+                      hover
+                      sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
+                    >
+                      <TableCell>{work.Name || "N/A"}</TableCell>
+                      <TableCell>{formatDate(work.Date)}</TableCell>
+                      {!isMobile && <TableCell>{work.Client || "N/A"}</TableCell>}
+                      <TableCell sx={{ maxWidth: isMobile ? 100 : 'none', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Tooltip title={work.Assignment || "N/A"}>
+                          <span>{work.Assignment || "N/A"}</span>
                         </Tooltip>
                       </TableCell>
-                    )}
-                    {!isMobile && <TableCell>{work.Financial_Year || "N/A"}</TableCell>}
-                    {!isMobile && (
-                      <TableCell>
-                        {formatTime(work.Start_Time)} - {formatTime(work.End_Time)}
-                      </TableCell>
-                    )}
-                    <TableCell>{work.Hours || "N/A"}</TableCell>
-                    {!isMobile && (
-                      <TableCell>
-                        {work.Completion === true ? (
-                          <Chip size="small" label="Yes" color="success" />
-                        ) : work.Completion === false ? (
-                          <Chip size="small" label="No" color="warning" />
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                    )}
-                    <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
+                      {!isMobile && (
+                        <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <Tooltip title={work.Work_Done || "N/A"}>
+                            <span>{work.Work_Done || "N/A"}</span>
+                          </Tooltip>
+                        </TableCell>
+                      )}
+                      {!isMobile && <TableCell>{work.Financial_Year || "N/A"}</TableCell>}
+                      {!isMobile && (
+                        <TableCell>
+                          {formatTime(work.Start_Time)} - {formatTime(work.End_Time)}
+                        </TableCell>
+                      )}
+                      <TableCell>{work.Hours || "N/A"}</TableCell>
+                      {!isMobile && (
+                        <TableCell>
+                          {work.Completion === true ? (
+                            <Chip size="small" label="Yes" color="success" />
+                          ) : work.Completion === false ? (
+                            <Chip size="small" label="No" color="warning" />
+                          ) : (
+                            "N/A"
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow sx={{ backgroundColor: "grey.100" }}>
+                    <TableCell colSpan={isMobile ? 3 : 8} align="right" sx={{ fontWeight: "bold" }}>
+                      Totals:
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      {totalHours.toFixed(2)}
+                    </TableCell>
+                    {!isMobile && <TableCell />}
+                    <TableCell sx={{ fontWeight: "bold" }}>
+                      ₹{totalCost.toFixed(2)}
+                    </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow sx={{ backgroundColor: "grey.100" }}>
-                  <TableCell colSpan={isMobile ? 3 : 8} align="right" sx={{ fontWeight: "bold" }}>
-                    Totals:
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    {totalHours.toFixed(2)}
-                  </TableCell>
-                  {!isMobile && <TableCell />}
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    ₹{totalCost.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          </TableContainer>
+                </TableFooter>
+              </Table>
+            </TableContainer>
+          </Box>
         )}
 
         {/* Filter Drawer for mobile */}
@@ -668,7 +706,9 @@ const StaffReport = () => {
         >
           <Box sx={{ p: 2 }}>
             <Typography variant="h6" sx={{ mb: 3 }}>Report Filters</Typography>
-            <FiltersComponent />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <FiltersComponent />
+            </LocalizationProvider>
             <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
               <Button onClick={() => setFilterDrawerOpen(false)}>Close</Button>
               <Button 
@@ -682,8 +722,8 @@ const StaffReport = () => {
           </Box>
         </Drawer>
       </Box>
-    </LocalizationProvider>
+    </Box>
   );
 };
 
-export default StaffReport;
+export default withAuth(StaffReport);

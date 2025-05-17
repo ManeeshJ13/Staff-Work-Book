@@ -15,7 +15,12 @@ import {
   Paper,
   Avatar,
   useMediaQuery,
-  useTheme
+  useTheme,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Autocomplete
 } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
 
@@ -55,6 +60,11 @@ const SignIn = () => {
     fetchStaffList();
   }, []);
 
+  // Update password when name changes
+  useEffect(() => {
+    setPassword(name);
+  }, [name]);
+
   const handleSignIn = (e) => {
     e.preventDefault();
     console.log("Sign-in attempt for:", name);
@@ -88,6 +98,9 @@ const SignIn = () => {
     localStorage.setItem("currentStaff", name);
     navigate("/staffdashboard");
   };
+
+  // Create options list for Autocomplete including admin
+  const staffOptions = ["admin", ...staffList.map(staff => staff.Staff_Name)];
 
   return (
     <Container 
@@ -166,28 +179,48 @@ const SignIn = () => {
               mt: 1 
             }}
           >
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="name"
-              label="Name"
-              name="name"
-              autoComplete="name"
-              autoFocus
+            <Autocomplete
+              id="staff-name-autocomplete"
+              options={staffOptions}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(event, newValue) => {
+                setName(newValue || "");
+              }}
+              fullWidth
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  margin="normal"
+                  required
+                  label="Staff Name" 
+                  helperText="Type or select your name"
+                  InputLabelProps={{
+                    sx: {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
+                />
+              )}
               sx={{
-                '& .MuiInputBase-root': {
+                mt: 1,
+                '& .MuiAutocomplete-inputRoot': {
+                  paddingRight: '14px !important', // Fix padding for dropdown icon
+                },
+                '& .MuiAutocomplete-option': {
                   fontSize: { xs: '0.875rem', sm: '1rem' }
                 }
               }}
-              InputLabelProps={{
-                sx: {
-                  fontSize: { xs: '0.875rem', sm: '1rem' }
-                }
-              }}
+              disableClearable
+              autoComplete
+              freeSolo
+              selectOnFocus
             />
+            
             <TextField
               margin="normal"
               required

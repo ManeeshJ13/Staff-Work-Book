@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import withAuth from '../../components/withAuth';
 
 import {
     Box,
@@ -15,6 +16,9 @@ import {
     CircularProgress
 } from "@mui/material"
 
+function AdminPage(){
+    return <div>Admin-Only Content</div>;
+}
 const AddAssignment = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -322,4 +326,4 @@ const AddAssignment = () => {
     );
 };
 
-export default AddAssignment;
+export default withAuth(AddAssignment);

@@ -77,8 +77,8 @@ const AdminLayout = () => {
     { text: 'Staff Report', icon: <Assessment />, path: '/admin/StaffReport' },
     { text: 'Assignment Report', icon: <Assessment />, path: '/admin/AssignmentReport' },
     { text: 'Daily Summary', icon: <CalendarToday />, path: '/admin/DailySummary' },
-    { text: 'Add New Client', icon: <PersonAdd />, path: '/admin/AddClientPage' },
-    { text: 'Add New Staff', icon: <PersonAdd />, path: '/admin/AddStaff' },
+    { text: 'Client Management', icon: <PersonAdd />, path: '/admin/ClientManagement' },
+    { text: 'Staff Management', icon: <PersonAdd />, path: '/admin/StaffManagement' },
     { text: 'Add New Assignment', icon: <Assignment />, path: '/admin/AddAssignment' }
   ];
 

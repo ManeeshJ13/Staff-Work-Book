@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../../lib/supabaseClient';
+import withAuth from '../../../components/withAuth';
 
 import {
     Box,
@@ -14,6 +15,10 @@ import {
     Alert,
     CircularProgress
 } from "@mui/material"
+
+function AdminPage(){
+    return <div>Admin-Only Content</div>;
+}
 
 const AddClient = () => {
     const theme = useTheme();
@@ -322,4 +327,4 @@ const AddClient = () => {
     );
 };
 
-export default AddClient;
+export default withAuth(AddClient);

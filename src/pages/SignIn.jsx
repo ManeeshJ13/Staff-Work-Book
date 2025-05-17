@@ -72,7 +72,7 @@ const SignIn = () => {
 
     const admin_cred = {
       username: "admin",
-      password: "admin"
+      password: "admin123"
     };
 
     // Check for admin credentials

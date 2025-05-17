@@ -127,7 +127,7 @@ const ClientManagement = () => {
 
                     <Button
                         component={Link}
-                        to="/admin/ClientManagement"
+                        to="/admindash"
                         variant="contained"
                         fullWidth={isMobile}
                         sx={{
@@ -139,7 +139,7 @@ const ClientManagement = () => {
                             mt: { xs: 2, sm: 3 }
                         }}
                     >
-                        Logout
+                        BACK
                     </Button>
                 </Stack>
             </Paper>

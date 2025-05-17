@@ -150,6 +150,9 @@ const EditClient = () => {
                         component={Link}
                         to="/admin/AssignmentManagement"
                         variant="contained"
+                        sx={{
+                            ml:'20px'
+                        }}
                     >
                         Back
                     </Button>

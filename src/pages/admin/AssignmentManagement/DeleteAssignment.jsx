@@ -1,279 +1,372 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../../../lib/supabaseClient';
+import withAuth from '../../../components/withAuth';
+
 import {
     Box,
     Typography,
-    Button,
-    Container,
     Paper,
-    useMediaQuery,
+    Container,
     useTheme,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemSecondaryAction,
-    IconButton,
+    useMediaQuery,
+    TextField,
+    Button,
+    Alert,
+    CircularProgress,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions,
-    CircularProgress,
-    Alert,
-    Snackbar
-} from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
-
-// Mock data - replace with actual API calls in production
-const mockAssignments = [
-    { id: 1, title: "Research Paper", course: "English 101", dueDate: "2025-06-15" },
-    { id: 2, title: "Math Quiz", course: "Mathematics", dueDate: "2025-05-25" },
-    { id: 3, title: "Lab Report", course: "Chemistry", dueDate: "2025-06-01" },
-    { id: 4, title: "Group Project", course: "Business", dueDate: "2025-06-30" }
-];
+    DialogActions
+} from "@mui/material"
 
 const DeleteAssignment = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
     const navigate = useNavigate();
     
-    const [assignments, setAssignments] = useState([]);
+    // State for client selection
+    const [selectedAssignmentId, setSelectedAssignmentId] = useState('');
+    const [assignmentList, setAssignmentList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [openDialog, setOpenDialog] = useState(false);
-    const [selectedAssignment, setSelectedAssignment] = useState(null);
-    const [snackbar, setSnackbar] = useState({
-        open: false,
-        message: "",
-        severity: "success"
-    });
-
-    // Fetch assignments - replace with actual API call
+    
+    // State for form handling
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Confirmation dialog state
+    const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+    
+    // Fetch clients on component mount
     useEffect(() => {
-        // Simulate API call delay
         const fetchAssignments = async () => {
             try {
-                // Replace with actual API call:
-                // const response = await fetch('/api/assignments');
-                // const data = await response.json();
+                const { data, error } = await supabase
+                    .from('Assignments List')
+                    .select('id, Assignment_Name')
+                    .order('Assignment_Name');
                 
-                // Using mock data for now
-                setTimeout(() => {
-                    setAssignments(mockAssignments);
-                    setLoading(false);
-                }, 800);
+                if (error) throw error;
+                
+                setAssignmentList(data || []);
             } catch (err) {
-                setError("Failed to load assignments");
+                console.error('Error fetching assignments:', err);
+                setError('Failed to load assignments. Please try again.');
+            } finally {
                 setLoading(false);
             }
         };
-
+        
         fetchAssignments();
     }, []);
-
-    const handleDeleteClick = (assignment) => {
-        setSelectedAssignment(assignment);
-        setOpenDialog(true);
+    
+    // Handle back button
+    const handleBack = () => {
+        navigate('/admin/AssignmentManagement');
     };
-
-    const handleCloseDialog = () => {
-        setOpenDialog(false);
+    
+    // Open confirmation dialog
+    const handleOpenConfirmDialog = (e) => {
+        e.preventDefault();
+        if (!selectedAssignmentId) {
+            setError('Please select an assignment to delete');
+            return;
+        }
+        setOpenConfirmDialog(true);
     };
-
-    const handleConfirmDelete = async () => {
-        if (!selectedAssignment) return;
-        
-        setLoading(true);
+    
+    // Close confirmation dialog
+    const handleCloseConfirmDialog = () => {
+        setOpenConfirmDialog(false);
+    };
+    
+    // Handle actual deletion
+    const handleDelete = async () => {
+        setIsSubmitting(true);
+        setError('');
+        setSuccess(false);
         
         try {
-            // Replace with actual delete API call:
-            // await fetch(`/api/assignments/${selectedAssignment.id}`, {
-            //     method: 'DELETE',
-            // });
+            // Perform deletion from Supabase
+            const { error: deleteError } = await supabase
+                .from('Assignments List')
+                .delete()
+                .eq('id', selectedAssignmentId);
+                
+            if (deleteError) {
+                throw new Error(`Failed to delete assignment: ${deleteError.message}`);
+            }
             
-            // Simulating successful delete
-            setTimeout(() => {
-                setAssignments(assignments.filter(a => a.id !== selectedAssignment.id));
-                setSnackbar({
-                    open: true,
-                    message: "Assignment deleted successfully",
-                    severity: "success"
-                });
-                setLoading(false);
-                setOpenDialog(false);
-            }, 500);
+            // Success state
+            setSuccess(true);
+            setSelectedAssignmentId('');
+            
+            // Update clients list
+            const updatedList = assignmentList.filter(assignment => assignment.id !== selectedAssignmentId);
+            setAssignmentList(updatedList);
+            
+            // Close dialog
+            setOpenConfirmDialog(false);
+            
+            // Redirect after 1.5 seconds
+            setTimeout(() => navigate('/admin/AssignmentManagement'), 1500);
         } catch (err) {
-            setSnackbar({
-                open: true,
-                message: "Failed to delete assignment",
-                severity: "error"
-            });
-            setLoading(false);
-            setOpenDialog(false);
+            console.error('Error deleting assignment:', err);
+            setError(err.message);
+            setOpenConfirmDialog(false);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const handleCloseSnackbar = () => {
-        setSnackbar({ ...snackbar, open: false });
-    };
-
     return (
-        <Container 
+        <Container
             maxWidth="md"
             sx={{
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
                 alignItems: 'center',
-                minHeight: '100vh',
-                px: { xs: 2, sm: 3 },
-                py: { xs: 3, sm: 4 },
+                minHeight: { xs: 'calc(100vh - 32px)', md: '100vh' },
+                py: { xs: 2, md: 4 },
+                px: { xs: 2, sm: 3, md: 4 },
                 overflow: 'hidden'
             }}
         >
             <Paper
-                elevation={3}
+                elevation={isMobile ? 2 : 4}
                 sx={{
                     width: '100%',
-                    padding: { xs: 2, sm: 4 },
+                    maxWidth: { xs: '100%', sm: 500, md: 650 },
+                    padding: { xs: 2.5, sm: 3, md: 4 },
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
-                    borderRadius: 2,
-                    boxShadow: isMobile 
-                        ? '0 4px 6px rgba(0,0,0,0.1)' 
-                        : '0 10px 15px rgba(0,0,0,0.1)'
+                    borderRadius: { xs: 1.5, md: 2 },
+                    boxShadow: { 
+                        xs: '0 4px 8px rgba(0,0,0,0.05)',
+                        md: '0 10px 15px rgba(0,0,0,0.1)'
+                    },
+                    gap: { xs: 1.5, md: 2 },
+                    transition: 'all 0.3s ease'
                 }}
             >
-                <Typography
-                    variant="h1"
+                <Box 
                     sx={{
-                        mb: { xs: 2, sm: 3 },
-                        fontSize: { 
-                            xs: "1.75rem", 
-                            sm: "2.25rem", 
-                            md: "2.5rem" 
-                        },
-                        textAlign: 'center',
-                        fontWeight: 600
+                        display: 'flex',
+                        alignItems: 'center', 
+                        justifyContent: isMobile ? 'center' : 'space-between',
+                        mb: { xs: 1, md: 2 }
                     }}
                 >
-                    DELETE ASSIGNMENT
-                </Typography>
-                
-                {loading && !openDialog ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : error ? (
-                    <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+                    {!isMobile && (
+                        <Button 
+                            component={Link}
+                            to="/admindash"
+                            variant='contained'
+                            color='primary'
+                            sx={{ visibility: isMobile ? 'hidden' : 'visible' }}
+                        >
+                            Home
+                        </Button>
+                    )}
+                    
+                    <Typography
+                        variant={isMobile ? "h6" : "h5"}
+                        component="h1"
+                        sx={{
+                            fontWeight: 600,
+                            textAlign: isMobile ? 'center' : 'left',
+                            flexGrow: isMobile ? 1 : 0,
+                            color: theme.palette.error.dark
+                        }}
+                    >
+                        DELETE ASSIGNMENT
+                    </Typography>
+                    
+                    {!isMobile && <Box sx={{ width: 64 }} />}
+                </Box>
+
+                {error && (
+                    <Alert 
+                        severity="error" 
+                        sx={{ 
+                            mb: { xs: 1.5, md: 2 },
+                            fontSize: { xs: '0.875rem', md: '1rem' }
+                        }}
+                    >
                         {error}
                     </Alert>
-                ) : assignments.length === 0 ? (
-                    <Typography variant="body1" sx={{ my: 4, textAlign: 'center' }}>
-                        No assignments found.
-                    </Typography>
-                ) : (
-                    <List sx={{ width: '100%', mb: 3 }}>
-                        {assignments.map((assignment) => (
-                            <ListItem 
-                                key={assignment.id}
-                                divider
+                )}
+                
+                {success && (
+                    <Alert 
+                        severity="success" 
+                        sx={{ 
+                            mb: { xs: 1.5, md: 2 },
+                            fontSize: { xs: '0.875rem', md: '1rem' }
+                        }}
+                    >
+                        Assignment deleted successfully! Redirecting...
+                    </Alert>
+                )}
+                
+                <form onSubmit={handleOpenConfirmDialog} style={{ width: '100%' }}>
+                    {/* Client Selection */}
+                    <Box sx={{ mb: { xs: 2, md: 3 } }}>
+                        <Typography
+                            variant="subtitle1"
+                            component="p"
+                            sx={{
+                                fontWeight: 500,
+                                mb: 1,
+                                fontSize: { xs: '0.95rem', md: '1rem' }
+                            }}
+                        >
+                            Select Assignment to Delete*
+                        </Typography>
+                        <FormControl 
+                            fullWidth
+                            disabled={loading || isSubmitting}
+                            size={isMobile ? "small" : "medium"}
+                        >
+                            <InputLabel id="assignment-select-label">Assignment</InputLabel>
+                            <Select
+                                labelId="assignment-select-label"
+                                id="assignment-select"
+                                value={selectedAssignmentId}
+                                label="Assignment"
+                                onChange={(e) => setSelectedAssignmentId(e.target.value)}
                                 sx={{
-                                    '&:hover': {
-                                        bgcolor: 'rgba(0, 0, 0, 0.04)'
-                                    }
+                                    fontSize: { xs: '0.95rem', md: '1rem' },
+                                    borderRadius: { xs: 1, md: 1.5 }
                                 }}
                             >
-                                <ListItemText
-                                    primary={assignment.title}
-                                    secondary={
-                                        <>
-                                            <Typography component="span" variant="body2" color="text.primary">
-                                                {assignment.course}
-                                            </Typography>
-                                            {" — Due: " + new Date(assignment.dueDate).toLocaleDateString()}
-                                        </>
-                                    }
-                                />
-                                <ListItemSecondaryAction>
-                                    <IconButton 
-                                        edge="end" 
-                                        aria-label="delete"
-                                        onClick={() => handleDeleteClick(assignment)}
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </ListItemSecondaryAction>
-                            </ListItem>
-                        ))}
-                    </List>
-                )}
+                                {loading ? (
+                                    <MenuItem value="" disabled>Loading Assignments...</MenuItem>
+                                ) : assignmentList.length === 0 ? (
+                                    <MenuItem value="" disabled>No Assignments available</MenuItem>
+                                ) : (
+                                    assignmentList.map((assignment) => (
+                                        <MenuItem key={assignment.id} value={assignment.id}>
+                                            {assignment.Assignment_Name}
+                                        </MenuItem>
+                                    ))
+                                )}
+                            </Select>
+                        </FormControl>
+                    </Box>
 
-                <Button
-                    onClick={() => navigate("/admin/AssignmentManagement")}
-                    variant="contained"
-                    sx={{
-                        px: { xs: 3, sm: 4 },
-                        py: { xs: 1, sm: 1.5 },
-                        fontSize: { xs: '0.875rem', sm: '1rem' },
-                        textTransform: 'none',
-                        mt: { xs: 2, sm: 3 }
-                    }}
-                >
-                    BACK
-                </Button>
+                    <Box 
+                        sx={{ 
+                            display: 'flex', 
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: { xs: 1.5, sm: 2 },
+                            mt: { xs: 1, md: 2 }
+                        }}
+                    >
+                        {isMobile && (
+                            <Button
+                                variant="outlined"
+                                color="inherit"
+                                fullWidth
+                                onClick={handleBack}
+                                disabled={isSubmitting}
+                                sx={{
+                                    py: { xs: 1, md: 1.5 },
+                                    order: 2
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                        )}
+                        
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="error"
+                            fullWidth
+                            disabled={loading || isSubmitting || !selectedAssignmentId}
+                            sx={{
+                                py: { xs: 1.2, md: 1.5 },
+                                fontWeight: 600,
+                                order: { xs: 1, sm: 2 },
+                                boxShadow: 1,
+                                '&:hover': {
+                                    boxShadow: 2
+                                }
+                            }}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                                    Deleting Assignment...
+                                </>
+                            ) : (
+                                'Delete Assignment'
+                            )}
+                        </Button>
+                    </Box>
+                </form>
             </Paper>
-
+            
             {/* Confirmation Dialog */}
             <Dialog
-                open={openDialog}
-                onClose={handleCloseDialog}
+                open={openConfirmDialog}
+                onClose={handleCloseConfirmDialog}
                 aria-labelledby="alert-dialog-title"
                 aria-describedby="alert-dialog-description"
             >
                 <DialogTitle id="alert-dialog-title">
-                    {"Confirm Deletion"}
+                    {"Confirm Assignment Deletion"}
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText id="alert-dialog-description">
-                        Are you sure you want to delete the assignment "{selectedAssignment?.title}"? 
+                        Are you sure you want to delete this assignment?
+                        <br />
+                        {selectedAssignmentId && (
+                            <strong>
+                                {assignmentList.find(a => a.id === selectedAssignmentId)?.Assignment_Name}
+                            </strong>
+                        )}
+                        <br /><br />
                         This action cannot be undone.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseDialog} color="primary">
+                    <Button 
+                        onClick={handleCloseConfirmDialog} 
+                        color="inherit"
+                        disabled={isSubmitting}
+                    >
                         Cancel
                     </Button>
                     <Button 
-                        onClick={handleConfirmDelete} 
+                        onClick={handleDelete} 
                         color="error" 
                         variant="contained"
-                        disabled={loading}
-                        startIcon={loading ? <CircularProgress size={20} /> : null}
+                        autoFocus
+                        disabled={isSubmitting}
                     >
-                        {loading ? "Deleting..." : "Delete"}
+                        {isSubmitting ? (
+                            <>
+                                <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+                                Deleting...
+                            </>
+                        ) : (
+                            'Delete'
+                        )}
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            {/* Success/Error Snackbar */}
-            <Snackbar 
-                open={snackbar.open} 
-                autoHideDuration={6000} 
-                onClose={handleCloseSnackbar}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert 
-                    onClose={handleCloseSnackbar} 
-                    severity={snackbar.severity} 
-                    sx={{ width: '100%' }}
-                >
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
         </Container>
     );
 };
 
-export default DeleteAssignment;
+export default withAuth(DeleteAssignment);

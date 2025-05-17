@@ -58,7 +58,7 @@ const ClientManagement = () => {
                         fontWeight: 600
                     }}
                 >
-                    STAFF MANAGEMENT
+                    CLIENT MANAGEMENT
                 </Typography>
                 
                 <Stack 
@@ -94,7 +94,7 @@ const ClientManagement = () => {
 
                         <Button
                             component={Link}
-                            to="/dataedit"
+                            to="/admin/ClientManagement/DeleteClient"
                             variant="contained"
                             fullWidth={isMobile}
                             sx={{
@@ -105,13 +105,30 @@ const ClientManagement = () => {
                                 maxWidth: { sm: 200 }
                             }}
                         >
-                            Edit Data
+                            DELETE CLIENT
+                        </Button>
+
+                        <Button
+                            component={Link}
+                            to="/admin/ClientManagement/EditClient"
+                            variant="contained"
+                            fullWidth={isMobile}
+                            sx={{
+                                px: { xs: 2, sm: 4 },
+                                py: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                textTransform: 'none',
+                                maxWidth: { sm: 200 }
+                            }}
+                        >
+                            EDIT CLIENT
                         </Button>
                     </Stack>
 
                     <Button
+                        component={Link}
+                        to="/admin/ClientManagement"
                         variant="contained"
-                        color="error"
                         fullWidth={isMobile}
                         sx={{
                             px: { xs: 2, sm: 4 },

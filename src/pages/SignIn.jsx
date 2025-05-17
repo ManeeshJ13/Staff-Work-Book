@@ -16,10 +16,6 @@ import {
   Avatar,
   useMediaQuery,
   useTheme,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Autocomplete
 } from "@mui/material";
 import { LockOutlined } from "@mui/icons-material";
@@ -30,6 +26,7 @@ const SignIn = () => {
   const [error, setError] = useState("");
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [passwordModifiedDirectly, setPasswordModifiedDirectly] = useState(false);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -60,10 +57,25 @@ const SignIn = () => {
     fetchStaffList();
   }, []);
 
-  // Update password when name changes
+  // Update password when name changes only if password hasn't been directly modified
   useEffect(() => {
-    setPassword(name);
-  }, [name]);
+    if (!passwordModifiedDirectly) {
+      setPassword(name);
+    }
+  }, [name, passwordModifiedDirectly]);
+
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value);
+    setPasswordModifiedDirectly(true);
+  };
+
+  const handleNameChange = (event, newValue) => {
+    setName(newValue || "");
+    
+    // If name is changed after directly modifying password, reset the flag
+    // so password will sync with name again
+    setPasswordModifiedDirectly(false);
+  };
 
   const handleSignIn = (e) => {
     e.preventDefault();
@@ -72,7 +84,7 @@ const SignIn = () => {
 
     const admin_cred = {
       username: "admin",
-      password: "admin123"
+      password: "admin"
     };
 
     // Check for admin credentials
@@ -183,9 +195,7 @@ const SignIn = () => {
               id="staff-name-autocomplete"
               options={staffOptions}
               value={name}
-              onChange={(event, newValue) => {
-                setName(newValue || "");
-              }}
+              onChange={handleNameChange}
               fullWidth
               renderInput={(params) => (
                 <TextField 
@@ -231,7 +241,7 @@ const SignIn = () => {
               id="password"
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               helperText="Your password is your name"
               sx={{
                 '& .MuiInputBase-root': {

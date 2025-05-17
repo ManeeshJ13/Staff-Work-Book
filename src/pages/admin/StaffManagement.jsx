@@ -12,7 +12,7 @@ import {
     Stack
 } from "@mui/material";
 
-const ClientManagement = () => {
+const StaffManagement = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const navigate = useNavigate();
@@ -34,7 +34,7 @@ const ClientManagement = () => {
                 elevation={3}
                 sx={{
                     width: '100%',
-                    maxWidth: 500,
+                    maxWidth: 800,
                     padding: { xs: 2, sm: 4 },
                     display: 'flex',
                     flexDirection: 'column',
@@ -58,7 +58,7 @@ const ClientManagement = () => {
                         fontWeight: 600
                     }}
                 >
-                    CLIENT MANAGEMENT
+                    STAFF MANAGEMENT
                 </Typography>
                 
                 <Stack 
@@ -78,7 +78,7 @@ const ClientManagement = () => {
                     >
                         <Button
                             component={Link}
-                            to="/admin/ClientManagement/AddClient"
+                            to="/admin/StaffManagement/AddStaff"
                             variant="contained"
                             fullWidth={isMobile}
                             sx={{
@@ -89,12 +89,12 @@ const ClientManagement = () => {
                                 maxWidth: { sm: 200 }
                             }}
                         >
-                            ADD CLIENT
+                            ADD STAFF
                         </Button>
 
                         <Button
                             component={Link}
-                            to="/dataedit"
+                            to="/admin/StaffManagement/DeleteStaff"
                             variant="contained"
                             fullWidth={isMobile}
                             sx={{
@@ -105,13 +105,30 @@ const ClientManagement = () => {
                                 maxWidth: { sm: 200 }
                             }}
                         >
-                            Edit Data
+                            DELETE STAFF
+                        </Button>
+
+                        <Button
+                            component={Link}
+                            to="/admin/StaffManagement/EditStaff"
+                            variant="contained"
+                            fullWidth={isMobile}
+                            sx={{
+                                px: { xs: 2, sm: 4 },
+                                py: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                textTransform: 'none',
+                                maxWidth: { sm: 200 }
+                            }}
+                        >
+                            EDIT STAFF
                         </Button>
                     </Stack>
 
                     <Button
+                        component={Link}
+                        to="/admindash"
                         variant="contained"
-                        color="error"
                         fullWidth={isMobile}
                         sx={{
                             px: { xs: 2, sm: 4 },
@@ -122,7 +139,7 @@ const ClientManagement = () => {
                             mt: { xs: 2, sm: 3 }
                         }}
                     >
-                        Logout
+                        BACK
                     </Button>
                 </Stack>
             </Paper>
@@ -130,4 +147,4 @@ const ClientManagement = () => {
     );
 };
 
-export default ClientManagement;
+export default StaffManagement;

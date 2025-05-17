@@ -58,7 +58,7 @@ const AssignmentManagement = () => {
                         fontWeight: 600
                     }}
                 >
-                    STAFF MANAGEMENT
+                    ASSIGNMENT MANAGEMENT
                 </Typography>
                 
                 <Stack 
@@ -78,7 +78,7 @@ const AssignmentManagement = () => {
                     >
                         <Button
                             component={Link}
-                            to="/dataentry"
+                            to="/admin/AssignmentManagement/AddAssignment"
                             variant="contained"
                             fullWidth={isMobile}
                             sx={{
@@ -89,12 +89,12 @@ const AssignmentManagement = () => {
                                 maxWidth: { sm: 200 }
                             }}
                         >
-                            Enter Data
+                            NEW ASSIGNMENT
                         </Button>
 
                         <Button
                             component={Link}
-                            to="/dataedit"
+                            to="/admin/AssignmentManagement/DeleteAssignment"
                             variant="contained"
                             fullWidth={isMobile}
                             sx={{
@@ -105,14 +105,30 @@ const AssignmentManagement = () => {
                                 maxWidth: { sm: 200 }
                             }}
                         >
-                            Edit Data
+                            DELETE ASSIGNMENT
+                        </Button>
+                        
+                        <Button
+                            component={Link}
+                            to="/admin/AssignmentManagement/EditAssignment"
+                            variant="contained"
+                            fullWidth={isMobile}
+                            sx={{
+                                px: { xs: 2, sm: 4 },
+                                py: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                textTransform: 'none',
+                                maxWidth: { sm: 200 }
+                            }}
+                        >
+                            EDIT ASSIGNMENT
                         </Button>
                     </Stack>
 
                     <Button
-                        onClick={handleLogout}
+                        component={Link}
+                        to="/admindash"
                         variant="contained"
-                        color="error"
                         fullWidth={isMobile}
                         sx={{
                             px: { xs: 2, sm: 4 },
@@ -123,7 +139,7 @@ const AssignmentManagement = () => {
                             mt: { xs: 2, sm: 3 }
                         }}
                     >
-                        Logout
+                        BACK
                     </Button>
                 </Stack>
             </Paper>

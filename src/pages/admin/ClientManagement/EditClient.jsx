@@ -37,6 +37,7 @@ const EditClient = () => {
     // State for client details
     const [clientData, setClientData] = useState({
         Client_Name: '',
+        Group: ''
     });
     
     // State for form handling
@@ -88,6 +89,7 @@ const EditClient = () => {
                 if (data) {
                     setClientData({
                         Client_Name: data.Client_Name || '',
+                        Group: data.Group || ''
                     });
                 }
             } catch (err) {
@@ -100,6 +102,7 @@ const EditClient = () => {
             // Clear form if no client is selected
             setClientData({
                 Client_Name: '',
+                Group: ''
             });
         }
     };
@@ -131,6 +134,7 @@ const EditClient = () => {
                 .from('Clients List')
                 .update({
                     Client_Name: clientData.Client_Name,
+                    Group: clientData.Group
                 })
                 .eq('id', selectedClientId);
                 
@@ -310,25 +314,37 @@ const EditClient = () => {
                                     <CircularProgress size={40} />
                                 </Box>
                             ) : (
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12}>
-                                        <TextField
-                                            fullWidth
-                                            label="Client Name"
-                                            name="Client_Name"
-                                            value={clientData.Client_Name}
-                                            onChange={handleInputChange}
-                                            required
-                                            disabled={isSubmitting}
-                                            size={isMobile ? "small" : "medium"}
-                                            sx={{
-                                                fontSize: { xs: '0.95rem', md: '1rem' },
-                                                borderRadius: { xs: 1, md: 1.5 }
-                                            }}
-                                        />
-                                    </Grid>
+                                <Box>
+                                    <TextField
+                                        fullWidth
+                                        label="Client Name"
+                                        name="Client_Name"
+                                        value={clientData.Client_Name}
+                                        onChange={handleInputChange}
+                                        required
+                                        disabled={isSubmitting}
+                                        size={isMobile ? "small" : "medium"}
+                                        sx={{
+                                            fontSize: { xs: '0.95rem', md: '1rem' },
+                                            borderRadius: { xs: 1, md: 1.5 },
+                                            mb: 2
+                                        }}
+                                    />
                                     
-                                </Grid>
+                                    <TextField
+                                        fullWidth
+                                        label="Group"
+                                        name="Group"
+                                        value={clientData.Group}
+                                        onChange={handleInputChange}
+                                        disabled={isSubmitting}
+                                        size={isMobile ? "small" : "medium"}
+                                        sx={{
+                                            fontSize: { xs: '0.95rem', md: '1rem' },
+                                            borderRadius: { xs: 1, md: 1.5 }
+                                        }}
+                                    />
+                                </Box>
                             )}
                         </>
                     )}

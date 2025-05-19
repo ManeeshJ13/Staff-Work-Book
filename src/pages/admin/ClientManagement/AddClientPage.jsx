@@ -28,6 +28,7 @@ const AddClient = () => {
     
     // State for form fields
     const [clientName, setClientName] = useState('');
+    const [clientGroup, setClientGroup] = useState('');
     
     // State for form handling
     const [error, setError] = useState('');
@@ -44,6 +45,7 @@ const AddClient = () => {
     // Reset the form 
     const resetForm = () => {
         setClientName('');
+        setClientGroup('');
     };
 
     const handleSubmit = async (e) => {
@@ -101,6 +103,7 @@ const AddClient = () => {
                 .insert([{ 
                     id: nextId,
                     Client_Name: trimmedName,
+                    Group: clientGroup.trim()
                 }])
                 .select();
 
@@ -253,6 +256,44 @@ const AddClient = () => {
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
                             required
+                            disabled={isSubmitting}
+                            size={isMobile ? "small" : "medium"}
+                            InputProps={{
+                                sx: {
+                                    fontSize: { xs: '0.95rem', md: '1rem' },
+                                    borderRadius: { xs: 1, md: 1.5 }
+                                }
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    '&:hover fieldset': {
+                                        borderColor: theme.palette.primary.main,
+                                    },
+                                },
+                            }}
+                        />
+                    </Box>
+
+                    {/* Client Group Field */}
+                    <Box sx={{ mb: { xs: 2, md: 3 } }}>
+                        <Typography
+                            variant="subtitle1"
+                            component="p"
+                            sx={{
+                                fontWeight: 500,
+                                mb: 1,
+                                fontSize: { xs: '0.95rem', md: '1rem' }
+                            }}
+                        >
+                            Group
+                        </Typography>
+                        <TextField
+                            id="clientGroup"
+                            placeholder="Enter client group"
+                            variant="outlined"
+                            fullWidth
+                            value={clientGroup}
+                            onChange={(e) => setClientGroup(e.target.value)}
                             disabled={isSubmitting}
                             size={isMobile ? "small" : "medium"}
                             InputProps={{

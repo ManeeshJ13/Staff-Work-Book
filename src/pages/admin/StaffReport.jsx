@@ -56,6 +56,8 @@ const StaffReport = () => {
   // State for filter options
   const [staffList, setStaffList] = useState([]);
   const [clientList, setClientList] = useState([]);
+  const [clientsData, setClientsData] = useState([]); // Store full clients data
+  const [groupList, setGroupList] = useState([]); // Added groups list
   const [assignmentList, setAssignmentList] = useState([]);
   const [financialYearList, setFinancialYearList] = useState([]);
   const [staffHourlyRates, setStaffHourlyRates] = useState([]);
@@ -63,6 +65,7 @@ const StaffReport = () => {
   // Filter selections
   const [selectedStaff, setSelectedStaff] = useState([]);
   const [selectedClients, setSelectedClients] = useState([]);
+  const [selectedGroups, setSelectedGroups] = useState([]); // Added selected groups
   const [selectedAssignments, setSelectedAssignments] = useState([]);
   const [selectedFinancialYears, setSelectedFinancialYears] = useState([]);
   const [dateFrom, setDateFrom] = useState(null);
@@ -162,14 +165,30 @@ const StaffReport = () => {
       
       if (error) throw error;
       
+      // Store full clients data for group lookup
+      setClientsData(data || []);
+      
       const clients = data.map(item => item.Client_Name).filter(Boolean);
       clients.sort((a, b) => a && b ? a.localeCompare(b) : 0);
       
       setClientList(clients);
+      
+      // Extract unique groups from clients data
+      const uniqueGroups = [...new Set(data.map(item => item.Group).filter(Boolean))];
+      uniqueGroups.sort((a, b) => a && b ? a.localeCompare(b) : 0);
+      
+      setGroupList(uniqueGroups);
     } catch (err) {
       console.error("Error fetching client list:", err);
       throw err;
     }
+  };
+
+  // Get group for a client
+  const getClientGroup = (clientName) => {
+    if (!clientName) return "N/A";
+    const client = clientsData.find(client => client.Client_Name === clientName);
+    return client && client.Group ? client.Group : "N/A";
   };
 
   // Apply filters when any filter changes
@@ -178,11 +197,13 @@ const StaffReport = () => {
   }, [
     selectedStaff, 
     selectedClients, 
+    selectedGroups,
     selectedAssignments, 
     selectedFinancialYears, 
     dateFrom, 
     dateTo, 
-    staffWorkData
+    staffWorkData,
+    clientsData // Add clientsData to dependency array
   ]);
 
   // Filter data based on all selected filters
@@ -197,6 +218,14 @@ const StaffReport = () => {
     // Filter by clients
     if (selectedClients.length > 0) {
       filtered = filtered.filter(work => selectedClients.includes(work.Client));
+    }
+    
+    // Filter by groups
+    if (selectedGroups.length > 0) {
+      filtered = filtered.filter(work => {
+        const clientGroup = getClientGroup(work.Client);
+        return selectedGroups.includes(clientGroup);
+      });
     }
     
     // Filter by assignments
@@ -257,6 +286,7 @@ const StaffReport = () => {
   const clearAllFilters = () => {
     setSelectedStaff([]);
     setSelectedClients([]);
+    setSelectedGroups([]);
     setSelectedAssignments([]);
     setSelectedFinancialYears([]);
     setDateFrom(null);
@@ -278,6 +308,11 @@ const StaffReport = () => {
     return new Date(date).toLocaleDateString();
   };
 
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "N/A";
+    return new Date(timestamp).toLocaleString();
+  };
+
   const calculateTotalCostValue = (staffName, hours) => {
     if (!staffName || !hours) return NaN;
     
@@ -296,8 +331,8 @@ const StaffReport = () => {
   const exportToCSV = () => {
     // Create CSV content
     const headers = [
-      "Name", "Date", "Presence", "Client", "Assignment", "Work Done", 
-      "Financial Year", "Start Time", "End Time", "Hours", "Completion", "Total Cost"
+      "Name", "Date", "Presence", "Client", "Group", "Assignment", "Work Done", 
+      "Financial Year", "TimeStamp", "Hours", "Completion", "Total Cost"
     ];
     
     const csvContent = [
@@ -307,11 +342,11 @@ const StaffReport = () => {
         formatDate(row.Date),
         row.Presence === true ? "Yes" : "No",
         row.Client || "N/A",
+        getClientGroup(row.Client),
         row.Assignment || "N/A",
         `"${(row.Work_Done || "N/A").replace(/"/g, '""')}"`, // Escape quotes in text fields
         row.Financial_Year || "N/A",
-        formatTime(row.Start_Time),
-        formatTime(row.End_Time),
+        formatTimestamp(row.TimeStamp),
         row.Hours || "N/A",
         row.Completion === true ? "Yes" : "No",
         calculateTotalCost(row.Name, row.Hours)
@@ -399,6 +434,23 @@ const StaffReport = () => {
           </FormControl>
         </Grid>
         
+        {/* Group Selection - New */}
+        <Grid item xs={12} sm={6} md={3} lg={2}>
+          <FormControl fullWidth>
+            <Autocomplete
+              size="small"
+              multiple
+              fullWidth
+              value={selectedGroups}
+              onChange={(event, newValue) => setSelectedGroups(newValue)}
+              options={groupList}
+              renderInput={(params) => <TextField {...params} label="Groups" />}
+              disableCloseOnSelect
+              limitTags={1}
+            />
+          </FormControl>
+        </Grid>
+        
         {/* Assignment Selection */}
         <Grid item xs={12} sm={6} md={3} lg={2}>
           <FormControl fullWidth>
@@ -447,7 +499,7 @@ const StaffReport = () => {
   );
 
   return (
-    <Box sx={{ maxWidth: "100vw", overflow: "hidden" }}>
+    <Box sx={{ maxWidth: "100%", overflow: "hidden" }}>
       <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "1400px", mx: "auto" }}>
         {/* Header with title and home button */}
         <AppBar position="static" color="default" elevation={0} sx={{ mb: 2 }}>
@@ -492,6 +544,7 @@ const StaffReport = () => {
           
           {selectedStaff.length === 0 && 
            selectedClients.length === 0 && 
+           selectedGroups.length === 0 &&
            selectedAssignments.length === 0 && 
            selectedFinancialYears.length === 0 && 
            !dateFrom && 
@@ -530,6 +583,15 @@ const StaffReport = () => {
                   label={`Client: ${client}`} 
                   size="small" 
                   onDelete={() => setSelectedClients(prev => prev.filter(c => c !== client))} 
+                />
+              ))}
+              
+              {selectedGroups.map(group => (
+                <Chip 
+                  key={`group-${group}`}
+                  label={`Group: ${group}`} 
+                  size="small" 
+                  onDelete={() => setSelectedGroups(prev => prev.filter(g => g !== group))} 
                 />
               ))}
               
@@ -615,84 +677,93 @@ const StaffReport = () => {
             </Button>
           </Box>
         ) : (
-          <Box sx={{ width: '100%', overflowX: 'auto' }}>
-            <TableContainer component={Paper} elevation={2} sx={{ maxWidth: '100%' }}>
-              <Table size="small" aria-label="staff report table">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: "primary.light" }}>
-                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
-                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>}
-                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
-                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
-                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
-                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Time</TableCell>}
-                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
-                    {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
-                    <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredData.map((work, index) => (
-                    <TableRow 
-                      key={index}
-                      hover
-                      sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
-                    >
-                      <TableCell>{work.Name || "N/A"}</TableCell>
-                      <TableCell>{formatDate(work.Date)}</TableCell>
-                      {!isMobile && <TableCell>{work.Client || "N/A"}</TableCell>}
-                      <TableCell sx={{ maxWidth: isMobile ? 100 : 'none', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        <Tooltip title={work.Assignment || "N/A"}>
-                          <span>{work.Assignment || "N/A"}</span>
+          <TableContainer 
+            component={Paper} 
+            elevation={2} 
+            sx={{ 
+              width: '100%',
+              overflowX: 'auto',
+              '& .MuiTable-root': {
+                minWidth: isMobile ? 500 : 1100,
+                width: '100%'
+              }
+            }}
+          >
+            <Table size="small" aria-label="staff report table">
+              <TableHead>
+                <TableRow sx={{ backgroundColor: "primary.light" }}>
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>}
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Group</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>TimeStamp</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredData.map((work, index) => (
+                  <TableRow 
+                    key={index}
+                    hover
+                    sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
+                  >
+                    <TableCell>{work.Name || "N/A"}</TableCell>
+                    <TableCell>{formatDate(work.Date)}</TableCell>
+                    {!isMobile && <TableCell>{work.Client || "N/A"}</TableCell>}
+                    {!isMobile && <TableCell>{getClientGroup(work.Client)}</TableCell>}
+                    <TableCell sx={{ maxWidth: isMobile ? 100 : 'none', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <Tooltip title={work.Assignment || "N/A"}>
+                        <span>{work.Assignment || "N/A"}</span>
+                      </Tooltip>
+                    </TableCell>
+                    {!isMobile && (
+                      <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Tooltip title={work.Work_Done || "N/A"}>
+                          <span>{work.Work_Done || "N/A"}</span>
                         </Tooltip>
                       </TableCell>
-                      {!isMobile && (
-                        <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          <Tooltip title={work.Work_Done || "N/A"}>
-                            <span>{work.Work_Done || "N/A"}</span>
-                          </Tooltip>
-                        </TableCell>
-                      )}
-                      {!isMobile && <TableCell>{work.Financial_Year || "N/A"}</TableCell>}
-                      {!isMobile && (
-                        <TableCell>
-                          {formatTime(work.Start_Time)} - {formatTime(work.End_Time)}
-                        </TableCell>
-                      )}
-                      <TableCell>{work.Hours || "N/A"}</TableCell>
-                      {!isMobile && (
-                        <TableCell>
-                          {work.Completion === true ? (
-                            <Chip size="small" label="Yes" color="success" />
-                          ) : work.Completion === false ? (
-                            <Chip size="small" label="No" color="warning" />
-                          ) : (
-                            "N/A"
-                          )}
-                        </TableCell>
-                      )}
-                      <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow sx={{ backgroundColor: "grey.100" }}>
-                    <TableCell colSpan={isMobile ? 3 : 8} align="right" sx={{ fontWeight: "bold" }}>
-                      Totals:
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: "bold" }}>
-                      {totalHours.toFixed(2)}
-                    </TableCell>
-                    {!isMobile && <TableCell />}
-                    <TableCell sx={{ fontWeight: "bold" }}>
-                      ₹{totalCost.toFixed(2)}
-                    </TableCell>
+                    )}
+                    {!isMobile && <TableCell>{work.Financial_Year || "N/A"}</TableCell>}
+                    {!isMobile && (
+                      <TableCell>{formatTimestamp(work.TimeStamp)}</TableCell>
+                    )}
+                    <TableCell>{work.Hours || "N/A"}</TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        {work.Completion === true ? (
+                          <Chip size="small" label="Yes" color="success" />
+                        ) : work.Completion === false ? (
+                          <Chip size="small" label="No" color="warning" />
+                        ) : (
+                          "N/A"
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
                   </TableRow>
-                </TableFooter>
-              </Table>
-            </TableContainer>
-          </Box>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow sx={{ backgroundColor: "grey.100" }}>
+                  <TableCell colSpan={isMobile ? 3 : 9} align="right" sx={{ fontWeight: "bold" }}>
+                    Totals:
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: "bold" }}>
+                    {totalHours.toFixed(2)}
+                  </TableCell>
+                  {!isMobile && <TableCell />}
+                  <TableCell sx={{ fontWeight: "bold" }}>
+                    ₹{totalCost.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </TableContainer>
         )}
 
         {/* Filter Drawer for mobile */}
@@ -726,4 +797,4 @@ const StaffReport = () => {
   );
 };
 
-export default withAuth(StaffReport);
+export default withAuth(StaffReport)

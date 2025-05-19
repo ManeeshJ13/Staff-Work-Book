@@ -26,7 +26,7 @@ const SignIn = () => {
   const [error, setError] = useState("");
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [passwordModifiedDirectly, setPasswordModifiedDirectly] = useState(false);
+  
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -37,7 +37,7 @@ const SignIn = () => {
       try {
         const { data, error } = await supabase
           .from("Staff List")
-          .select("Staff_Name, hourly_rate");
+          .select("Staff_Name, Password");
 
         if (error) {
           console.error("Error fetching staff list:", error);
@@ -57,53 +57,39 @@ const SignIn = () => {
     fetchStaffList();
   }, []);
 
-  // Update password when name changes only if password hasn't been directly modified
-  useEffect(() => {
-    if (!passwordModifiedDirectly) {
-      setPassword(name);
-    }
-  }, [name, passwordModifiedDirectly]);
-
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
-    setPasswordModifiedDirectly(true);
   };
 
   const handleNameChange = (event, newValue) => {
     setName(newValue || "");
-    
-    // If name is changed after directly modifying password, reset the flag
-    // so password will sync with name again
-    setPasswordModifiedDirectly(false);
   };
 
   const handleSignIn = (e) => {
     e.preventDefault();
     console.log("Sign-in attempt for:", name);
-    console.log("Available staff:", staffList);
 
-    const admin_cred = {
-      username: "admin",
-      password: "admin"
-    };
-
-    // Check for admin credentials
-    if (name === admin_cred.username && password === admin_cred.password) {
+    // Check for admin credentials first - this works even if admin isn't in the dropdown
+    if (name === "admin" && password === "admin") {
+      console.log("Admin login successful");
       localStorage.setItem("isAdmin", "true");
-      localStorage.setItem("currentStaff", name);
+      localStorage.setItem("currentStaff", "admin");
       navigate("/admindash");
       return;
     }
 
-    // Check for staff credentials - using the actual Staff_Name property
-    const isValidEmployee = staffList.some(
-      (staff) =>
-        staff.Staff_Name.toLowerCase() === name.toLowerCase() &&
-        name.toLowerCase() === password.toLowerCase()
+    // Check for staff credentials against the Password column in Staff List
+    const staffMember = staffList.find(
+      staff => staff.Staff_Name === name
     );
 
-    if (!isValidEmployee) {
-      setError("Invalid credentials - use your name for both username and password");
+    if (!staffMember) {
+      setError("Invalid username. Please select a valid staff name.");
+      return;
+    }
+
+    if (staffMember.Password !== password) {
+      setError("Incorrect password. Please try again.");
       return;
     }
 
@@ -111,8 +97,8 @@ const SignIn = () => {
     navigate("/staffdashboard");
   };
 
-  // Create options list for Autocomplete including admin
-  const staffOptions = ["admin", ...staffList.map(staff => staff.Staff_Name)];
+  // Create options list for Autocomplete excluding admin
+  const staffOptions = staffList.map(staff => staff.Staff_Name);
 
   return (
     <Container 
@@ -203,7 +189,7 @@ const SignIn = () => {
                   margin="normal"
                   required
                   label="Staff Name" 
-                  helperText="Type or select your name"
+                  helperText="Select your name from the dropdown"
                   InputLabelProps={{
                     sx: {
                       fontSize: { xs: '0.875rem', sm: '1rem' }
@@ -213,6 +199,11 @@ const SignIn = () => {
                     '& .MuiInputBase-root': {
                       fontSize: { xs: '0.875rem', sm: '1rem' }
                     }
+                  }}
+                  inputProps={{
+                    ...params.inputProps,
+                    value: name, // Allow direct input even if not in options list
+                    onChange: (e) => setName(e.target.value) // Handle direct text input
                   }}
                 />
               )}
@@ -227,8 +218,8 @@ const SignIn = () => {
               }}
               disableClearable
               autoComplete
-              freeSolo
               selectOnFocus
+              freeSolo // This allows typing values not in the list (like 'admin')
             />
             
             <TextField
@@ -242,7 +233,7 @@ const SignIn = () => {
               autoComplete="current-password"
               value={password}
               onChange={handlePasswordChange}
-              helperText="Your password is your name"
+              helperText="Enter your password"
               sx={{
                 '& .MuiInputBase-root': {
                   fontSize: { xs: '0.875rem', sm: '1rem' }

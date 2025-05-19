@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { financialYears } from '../lib/dataLists';
 
 // Material-UI imports
 import {
@@ -50,7 +51,6 @@ const DataEntry = () => {
   // Lists that will be fetched from Supabase
   const [clientList, setClientList] = useState([]);
   const [assignmentList, setAssignmentList] = useState([]);
-  const [financialYears, setFinancialYears] = useState(['2023', '2024', '2025']);
   const [loading, setLoading] = useState(true);
   
   // Default form data with explicit types
@@ -61,7 +61,7 @@ const DataEntry = () => {
     assignment: '',
     workDescription: '',
     remarks: '',
-    financialYear: 2024, 
+    financialYear: financialYears[2], // Default to the third entry in the array (2024-25)
     startTime: new Date(new Date().setHours(9, 0, 0, 0)),
     endTime: new Date(new Date().setHours(17, 0, 0, 0)),
     hours: 8,
@@ -125,7 +125,7 @@ const DataEntry = () => {
   const handleAttendanceSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.presence) {
+          if (!formData.presence) {
       // If absent, reset all fields except date and presence
       setFormData({
         ...formData,
@@ -133,7 +133,7 @@ const DataEntry = () => {
         assignment: '',
         workDescription: '',
         remarks: '',
-        financialYear: 0,
+        financialYear: '',
         startTime: null,
         endTime: null,
         hours: 0,
@@ -244,7 +244,7 @@ const DataEntry = () => {
         Assignment: formData.presence ? formData.assignment : null,
         Work_Done: formData.presence ? formData.workDescription : null,
         Remark: formData.presence ? formData.remarks : null,
-        Financial_Year: formData.presence ? Number(formData.financialYear) : 0,
+        Financial_Year: formData.presence ? formData.financialYear : '',
         Start_Time: formData.presence ? formatTimeForDB(formData.startTime) : null,
         End_Time: formData.presence ? formatTimeForDB(formData.endTime) : null,
         Hours: formData.presence ? Number(formData.hours) : 0,
@@ -563,13 +563,13 @@ const DataEntry = () => {
                     <Select
                       labelId="financial-year-label"
                       value={formData.financialYear}
-                      onChange={(e) => setFormData({...formData, financialYear: Number(e.target.value)})}
+                      onChange={(e) => setFormData({...formData, financialYear: e.target.value})}
                       label="Financial Year"
                       required
                       size={getInputSize()}
                     >
                       {financialYears.map(year => (
-                        <MenuItem key={year} value={Number(year)}>
+                        <MenuItem key={year} value={year}>
                           {year}
                         </MenuItem>
                       ))}

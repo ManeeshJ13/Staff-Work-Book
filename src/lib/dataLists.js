@@ -1,8 +1,9 @@
 
 export const financialYears = [
-    "2022-2023",
-    "2023-2024", 
-    "2024-2025"
+    "2022-23",
+    "2023-24", 
+    "2024-25",
+    "2025-26"
   ];
   
   export const completionStatus = [

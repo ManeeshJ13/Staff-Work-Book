@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import withAuth from "../../components/withAuth";
@@ -19,18 +19,30 @@ import {
   AlertTitle,
   FormControl,
   Autocomplete,
-  TextField
+  TextField,
+  useMediaQuery,
+  useTheme,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+  IconButton
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 
-function AdminPage(){
-    return <div>Admin-Only Content</div>;
-}
 const DailySummary = () => {
   const [staffWorkData, setStaffWorkData] = useState([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [dateList, setDateList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const today = new Date();
   
   // Format date for display
@@ -122,80 +134,235 @@ const DailySummary = () => {
     return value ? "Yes" : "No";
   };
 
+  // Status chip for completion and presence
+  const StatusChip = ({ value, label }) => {
+    const color = value === true ? "success" : 
+                 value === false ? "error" : 
+                 "default";
+    
+    const icon = value === true ? <CheckCircleIcon fontSize="small" /> : 
+                value === false ? <CancelIcon fontSize="small" /> : 
+                null;
+    
+    return (
+      <Chip 
+        icon={icon}
+        label={label || (value ? "Yes" : "No")}
+        size="small"
+        color={color}
+        variant="outlined"
+      />
+    );
+  };
+
+  // Memoized hours summary calculation
+  const hoursSummary = useMemo(() => {
+    if (!staffWorkData.length) return { total: 0, average: 0 };
+    
+    const validHours = staffWorkData
+      .map(work => Number(work.Hours) || 0)
+      .filter(hours => !isNaN(hours));
+    
+    const total = validHours.reduce((sum, hours) => sum + hours, 0);
+    const average = validHours.length ? (total / validHours.length).toFixed(1) : 0;
+    
+    return { total: total.toFixed(1), average };
+  }, [staffWorkData]);
+
+  // Render mobile card view for each work entry
+  const renderMobileCards = () => (
+    <Box sx={{ mt: 2 }}>
+      {staffWorkData.map((work, index) => (
+        <Card key={index} sx={{ mb: 2, boxShadow: 1 }}>
+          <CardContent>
+            <Typography variant="h6" component="div" gutterBottom>
+              {work.Name || "N/A"}
+            </Typography>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Client:
+              </Typography>
+              <Typography variant="body1">
+                {work.Client || "N/A"}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Assignment:
+              </Typography>
+              <Typography variant="body1">
+                {work.Assignment || "N/A"}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                <AccessTimeIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
+                Time:
+              </Typography>
+              <Typography variant="body1">
+                {formatTime(work.Start_Time)} - {formatTime(work.End_Time)}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Hours:
+              </Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {work.Hours || "N/A"}
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+              <StatusChip value={work.Presence} label={work.Presence ? "Present" : "Absent"} />
+              <StatusChip value={work.Completion} label={work.Completion ? "Completed" : "Incomplete"} />
+            </Box>
+            
+            {work.Work_Done && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Work Details:
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  {work.Work_Done}
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </Box>
+  );
+
   return (
-    <Box>
-      <Box sx={{ p: 3, maxWidth: '1200px', mx: 'auto' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" fontWeight="bold">
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: '1200px', mx: 'auto' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'flex-start' : 'center', 
+        mb: 3 
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          {isMobile && (
+            <IconButton 
+              component={Link} 
+              to="/admindash" 
+              sx={{ mr: 1 }}
+              aria-label="Back to home"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          )}
+          <Typography 
+            variant={isMobile ? "h5" : "h4"} 
+            component="h1" 
+            fontWeight="bold"
+          >
             Daily Work Summary
           </Typography>
+        </Box>
+        
+        {!isMobile && (
           <Button 
             variant="contained" 
             color="primary" 
             component={Link} 
             to="/admindash"
+            startIcon={<ArrowBackIcon />}
           >
             Home
           </Button>
-        </Box>
-
-        {/* Date Filter */}
-        <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth>
-            <Autocomplete
-              value={selectedDate}
-              onChange={handleDateChange}
-              options={dateList}
-              getOptionLabel={(option) => formatDisplayDate(option)}
-              renderInput={(params) => <TextField {...params} label="Select Date" />}
-              disablePortal
-              fullWidth
-              loading={dateList.length === 0}
-              loadingText="Loading available dates..."
-              noOptionsText="No dates available"
-            />
-          </FormControl>
-        </Box>
-
-        {/* Selected Date Display */}
-        {selectedDate && (
-          <Paper elevation={1} sx={{ mb: 3, p: 2, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
-            <Typography variant="h5" fontWeight="medium">
-              {formatDisplayDate(selectedDate)}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Showing all work records for the selected date
-            </Typography>
-          </Paper>
         )}
+      </Box>
 
-        {loading ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress />
-            <Typography sx={{ mt: 2, color: 'text.secondary' }}>
-              Loading work data...
-            </Typography>
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            <AlertTitle>Error</AlertTitle>
-            {error}
-          </Alert>
-        ) : staffWorkData.length > 0 ? (
+      {/* Date Filter */}
+      <Box sx={{ mb: 3 }}>
+        <FormControl fullWidth>
+          <Autocomplete
+            value={selectedDate}
+            onChange={handleDateChange}
+            options={dateList}
+            getOptionLabel={(option) => formatDisplayDate(option)}
+            renderInput={(params) => <TextField {...params} label="Select Date" />}
+            disablePortal
+            fullWidth
+            loading={dateList.length === 0}
+            loadingText="Loading available dates..."
+            noOptionsText="No dates available"
+          />
+        </FormControl>
+      </Box>
+
+      {/* Selected Date Display with Summary Stats */}
+      {selectedDate && (
+        <Paper elevation={1} sx={{ mb: 3, p: 2, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+          <Grid container alignItems="center" spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Typography variant={isMobile ? "h6" : "h5"} fontWeight="medium">
+                {formatDisplayDate(selectedDate)}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {staffWorkData.length} work records
+              </Typography>
+            </Grid>
+            {staffWorkData.length > 0 && (
+              <Grid item xs={12} md={6}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: {xs: 'flex-start', md: 'flex-end'},
+                  flexWrap: 'wrap', 
+                  gap: 2 
+                }}>
+                  <Chip 
+                    label={`Total: ${hoursSummary.total} hrs`} 
+                    color="secondary" 
+                    variant="filled" 
+                  />
+                  <Chip 
+                    label={`Avg: ${hoursSummary.average} hrs`} 
+                    color="secondary" 
+                    variant="outlined" 
+                  />
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+        </Paper>
+      )}
+
+      {loading ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <CircularProgress />
+          <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+            Loading work data...
+          </Typography>
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <AlertTitle>Error</AlertTitle>
+          {error}
+        </Alert>
+      ) : staffWorkData.length > 0 ? (
+        isMobile ? (
+          renderMobileCards()
+        ) : (
           <TableContainer component={Paper} elevation={2}>
-            <Table aria-label="staff work table" size="small">
+            <Table aria-label="staff work table" size="small" sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.100' }}>
                   <TableCell>Name</TableCell>
-                  <TableCell>Presence</TableCell>
+                  <TableCell align="center">Presence</TableCell>
                   <TableCell>Client</TableCell>
                   <TableCell>Assignment</TableCell>
                   <TableCell>Work Done</TableCell>
-                  <TableCell>Financial Year</TableCell>
-                  <TableCell>Start Time</TableCell>
-                  <TableCell>End Time</TableCell>
-                  <TableCell>Hours</TableCell>
-                  <TableCell>Completion</TableCell>
+                  <TableCell>FY</TableCell>
+                  <TableCell>Time</TableCell>
+                  <TableCell align="right">Hours</TableCell>
+                  <TableCell align="center">Completion</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -205,36 +372,45 @@ const DailySummary = () => {
                     hover
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   >
-                    <TableCell>{work.Name || "N/A"}</TableCell>
-                    <TableCell>{formatBoolean(work.Presence)}</TableCell>
+                    <TableCell sx={{ fontWeight: 'medium' }}>{work.Name || "N/A"}</TableCell>
+                    <TableCell align="center">
+                      <StatusChip value={work.Presence} />
+                    </TableCell>
                     <TableCell>{work.Client || "N/A"}</TableCell>
                     <TableCell>{work.Assignment || "N/A"}</TableCell>
-                    <TableCell>{work.Work_Done || "N/A"}</TableCell>
+                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {work.Work_Done || "N/A"}
+                    </TableCell>
                     <TableCell>{work.Financial_Year || "N/A"}</TableCell>
-                    <TableCell>{formatTime(work.Start_Time)}</TableCell>
-                    <TableCell>{formatTime(work.End_Time)}</TableCell>
-                    <TableCell>{work.Hours || "N/A"}</TableCell>
-                    <TableCell>{formatBoolean(work.Completion)}</TableCell>
+                    <TableCell>
+                      {formatTime(work.Start_Time)} - {formatTime(work.End_Time)}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'medium' }}>
+                      {work.Hours || "N/A"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <StatusChip value={work.Completion} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        ) : (
-          <Paper 
-            elevation={1} 
-            sx={{ 
-              p: 5, 
-              textAlign: 'center',
-              bgcolor: 'grey.50'
-            }}
-          >
-            <Typography variant="h6" color="text.secondary">
-              No Data Available for Selected Date
-            </Typography>
-          </Paper>
-        )}
-      </Box>
+        )
+      ) : (
+        <Paper 
+          elevation={1} 
+          sx={{ 
+            p: 5, 
+            textAlign: 'center',
+            bgcolor: 'grey.50'
+          }}
+        >
+          <Typography variant="h6" color="text.secondary">
+            No Data Available for Selected Date
+          </Typography>
+        </Paper>
+      )}
     </Box>
   );
 };

@@ -30,7 +30,6 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { addDays, format, startOfDay, isSameDay } from 'date-fns';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import TodayIcon from '@mui/icons-material/Today';
@@ -83,91 +82,122 @@ const AssignmentReport = () => {
   }, [memoizedDateRange]);
 
   // Fetch staff list and work data with optimized data fetching
-  useEffect(() => {
-    const fetchData = async () => {
-      if (dateRange.length === 0) return;
+  // Replace the useEffect that fetches data with this updated version
+  // Replace the useEffect that fetches data with this completely redesigned version
+useEffect(() => {
+  const fetchData = async () => {
+    if (dateRange.length === 0) return;
+    
+    try {
+      setLoading(true);
+      setError(null); // Clear any previous errors
       
-      try {
-        setLoading(true);
+      console.log("Fetching data for date range:", formatQueryDate(startDate), "to", formatQueryDate(endDate));
+      
+      // CRITICAL CHANGE: First get work data for this period to ensure we capture new staff
+      const { data: periodWorkData, error: workError } = await supabase
+        .from("Staff Work")
+        .select("*")
+        .gte("Date", formatQueryDate(startDate))
+        .lte("Date", formatQueryDate(endDate));
+      
+      if (workError) throw workError;
+      console.log("Work data retrieved:", periodWorkData?.length || 0, "records");
+      
+      // Extract ALL unique staff names from this period's work data first
+      // This is crucial to ensure new staff are captured
+      const periodStaffNames = [...new Set(periodWorkData
+        .filter(record => record.Name) // Filter out null names
+        .map(record => record.Name))];
+      
+      console.log("Staff names from current period:", periodStaffNames);
+      
+      // THEN get all historical staff for completeness
+      const { data: allStaffData, error: staffError } = await supabase
+        .from("Staff Work")
+        .select("Name")
+        .order("Name")
+        .not("Name", "is", null);
+      
+      if (staffError) throw staffError;
+      
+      // Combine current period staff with historical staff to ensure we have everyone
+      const allStaffNames = [...new Set([
+        ...periodStaffNames,
+        ...allStaffData.map(item => item.Name)
+      ])];
+      
+      console.log("Combined staff list (should include new staff):", allStaffNames);
+      
+      // Create staff list and summary structure
+      const staffList = allStaffNames.map(name => ({
+        name,
+        workData: {}
+      }));
+      
+      // Initialize summary data structure
+      const summary = {};
+      allStaffNames.forEach(name => {
+        summary[name] = {};
         
-        // Use Promise.all to parallelize the API calls
-        const [staffNamesResponse, workDataResponse] = await Promise.all([
-          // Get unique staff names from the database
-          supabase
-            .from("Staff Work")
-            .select("Name")
-            .order("Name")
-            .not("Name", "is", null),
-          
-          // Fetch all work data for the date range
-          supabase
-            .from("Staff Work")
-            .select("*")
-            .gte("Date", formatQueryDate(startDate))
-            .lte("Date", formatQueryDate(endDate))
-        ]);
-        
-        if (staffNamesResponse.error) throw staffNamesResponse.error;
-        if (workDataResponse.error) throw workDataResponse.error;
-        
-        // Extract unique staff names
-        const uniqueStaffNames = [...new Set(staffNamesResponse.data.map(item => item.Name))];
-        const workData = workDataResponse.data;
-        
-        // Process and organize the data
-        const staffList = uniqueStaffNames.map(name => ({
-          name,
-          workData: {}
-        }));
-        
-        // Create a summary of work hours and presence by staff and date - optimize by reducing iterations
-        const summary = {};
-        
-        // Initialize summary structure
-        uniqueStaffNames.forEach(name => {
-          summary[name] = {};
-          
-          dateRange.forEach(date => {
-            const dateStr = formatQueryDate(date);
-            summary[name][dateStr] = {
-              totalHours: 0,
-              onLeave: false,
-              records: []
-            };
-          });
+        dateRange.forEach(date => {
+          const dateStr = formatQueryDate(date);
+          summary[name][dateStr] = {
+            totalHours: 0,
+            onLeave: false,
+            records: []
+          };
         });
+      });
+      
+      // Process work data and populate summary
+      periodWorkData.forEach(record => {
+        const { Name, Date, Hours, Presence } = record;
         
-        // Process work data more efficiently
-        workData.forEach(record => {
-          const { Name, Date, Hours, Presence } = record;
-          
-          if (Name && Date && summary[Name] && summary[Name][Date]) {
-            summary[Name][Date].records.push(record);
-            
-            // If presence is false, mark as on leave
-            if (Presence === false) {
-              summary[Name][Date].onLeave = true;
-            }
-            
-            // Add hours if available
-            if (Hours) {
-              summary[Name][Date].totalHours += Hours;
-            }
-          }
-        });
+        // Add safety check to prevent errors
+        if (!Name || !Date || !summary[Name]) {
+          console.warn("Skipping invalid record:", record);
+          return;
+        }
         
-        setStaffData(staffList);
-        setSummaryData(summary);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load staff work data");
-      } finally {
-        setLoading(false);
-      }
-    };
+        // Initialize this date for this staff member if not already done
+        if (!summary[Name][Date]) {
+          summary[Name][Date] = {
+            totalHours: 0,
+            onLeave: false,
+            records: []
+          };
+        }
+        
+        // Add the record
+        summary[Name][Date].records.push(record);
+        
+        // Update leave status
+        if (Presence === false) {
+          summary[Name][Date].onLeave = true;
+        }
+        
+        // Add hours
+        if (Hours) {
+          summary[Name][Date].totalHours += Hours;
+        }
+      });
+      
+      console.log("Final staff list:", Object.keys(summary));
+      
+      // Update state with the new data
+      setStaffData(staffList);
+      setSummaryData(summary);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to load staff work data: " + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, [dateRange]);
+  fetchData();
+}, [dateRange, startDate, endDate]); // Added startDate and endDate to dependencies
 
   const handleStartDateChange = (newDate) => {
     if (newDate) {

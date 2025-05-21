@@ -45,6 +45,10 @@ const DailySummary = () => {
   
   const today = new Date();
   
+  // Get yesterday's date
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  
   // Format date for display
   const formatDisplayDate = (dateStr) => {
     if (!dateStr) return "";
@@ -57,8 +61,8 @@ const DailySummary = () => {
     });
   };
   
-  // Format today's date as ISO string for Supabase query (YYYY-MM-DD)
-  const todayFormatted = today.toISOString().split('T')[0];
+  // Format yesterday's date as ISO string for Supabase query (YYYY-MM-DD)
+  const yesterdayFormatted = yesterday.toISOString().split('T')[0];
 
   useEffect(() => {
     // Function to fetch all available dates from the database
@@ -75,9 +79,9 @@ const DailySummary = () => {
         const uniqueDates = [...new Set(data.map(item => item.Date))];
         setDateList(uniqueDates);
         
-        // Set default selected date to today if available, otherwise the most recent date
-        if (uniqueDates.includes(todayFormatted)) {
-          setSelectedDate(todayFormatted);
+        // Set default selected date to yesterday if available, otherwise the most recent date
+        if (uniqueDates.includes(yesterdayFormatted)) {
+          setSelectedDate(yesterdayFormatted);
         } else if (uniqueDates.length > 0) {
           setSelectedDate(uniqueDates[0]);
         }
@@ -88,7 +92,7 @@ const DailySummary = () => {
     };
 
     fetchAvailableDates();
-  }, [todayFormatted]);
+  }, [yesterdayFormatted]);
 
   useEffect(() => {
     // Function to fetch work data for the selected date
@@ -102,7 +106,7 @@ const DailySummary = () => {
           .from("Staff Work")
           .select("*")
           .eq("Date", selectedDate)
-          .order("Start_Time", { ascending: true });
+          .order("Name", { ascending: true }); // Sort alphabetically by name
 
         if (error) throw error;
         setStaffWorkData(data || []);
@@ -126,6 +130,18 @@ const DailySummary = () => {
     return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
+    });
+  };
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "N/A";
+    return new Date(timestamp).toLocaleString([], {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
     });
   };
 
@@ -216,6 +232,15 @@ const DailySummary = () => {
               </Typography>
             </Box>
             
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Timestamp:
+              </Typography>
+              <Typography variant="body1">
+                {formatTimestamp(work.TimeStamp) || "N/A"}
+              </Typography>
+            </Box>
+            
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
               <StatusChip value={work.Presence} label={work.Presence ? "Present" : "Absent"} />
               <StatusChip value={work.Completion} label={work.Completion ? "Completed" : "Incomplete"} />
@@ -262,7 +287,7 @@ const DailySummary = () => {
             component="h1" 
             fontWeight="bold"
           >
-            Daily Work Summary
+            DAILY WORK SUMMARY
           </Typography>
         </Box>
         
@@ -363,6 +388,7 @@ const DailySummary = () => {
                   <TableCell>Time</TableCell>
                   <TableCell align="right">Hours</TableCell>
                   <TableCell align="center">Completion</TableCell>
+                  <TableCell>TimeStamp</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -391,6 +417,7 @@ const DailySummary = () => {
                     <TableCell align="center">
                       <StatusChip value={work.Completion} />
                     </TableCell>
+                    <TableCell>{formatTimestamp(work.TimeStamp)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

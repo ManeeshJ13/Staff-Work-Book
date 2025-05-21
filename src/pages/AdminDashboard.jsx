@@ -84,9 +84,9 @@ const AdminLayout = () => {
   };
 
   const adminMenuItems = [
-    { text: 'Staff Report', icon: <Assessment />, path: '/admin/StaffReport' },
-    { text: 'Assignment Report', icon: <Assessment />, path: '/admin/AssignmentReport' },
-    { text: 'Daily Summary', icon: <CalendarToday />, path: '/admin/DailySummary' },
+    { text: 'Daily Attendance Summary', icon: <Assessment />, path: '/admin/AssignmentReport' },
+    { text: 'Daily Work Summary', icon: <CalendarToday />, path: '/admin/DailySummary' },
+    { text: 'Time and Cost Report', icon: <Assessment />, path: '/admin/StaffReport' },
     { text: 'Client Management', icon: <People />, path: '/admin/ClientManagement' },
     { text: 'Staff Management', icon: <PersonAdd />, path: '/admin/StaffManagement' },
     { text: 'Assignment Management', icon: <Assignment />, path: '/admin/AssignmentManagement' }

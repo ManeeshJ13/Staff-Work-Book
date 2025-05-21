@@ -295,22 +295,9 @@ const StaffReport = () => {
   };
 
   // Helper functions
-  const formatTime = (time) => {
-    if (!time) return "N/A";
-    return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const formatDate = (date) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString();
-  };
-
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return "N/A";
-    return new Date(timestamp).toLocaleString();
   };
 
   const calculateTotalCostValue = (staffName, hours) => {
@@ -332,7 +319,7 @@ const StaffReport = () => {
     // Create CSV content
     const headers = [
       "Name", "Date", "Presence", "Client", "Group", "Assignment", "Work Done", 
-      "Financial Year", "TimeStamp", "Hours", "Completion", "Total Cost"
+      "Financial Year", "Hours", "Completion", "Total Cost"
     ];
     
     const csvContent = [
@@ -346,7 +333,6 @@ const StaffReport = () => {
         row.Assignment || "N/A",
         `"${(row.Work_Done || "N/A").replace(/"/g, '""')}"`, // Escape quotes in text fields
         row.Financial_Year || "N/A",
-        formatTimestamp(row.TimeStamp),
         row.Hours || "N/A",
         row.Completion === true ? "Yes" : "No",
         calculateTotalCost(row.Name, row.Hours)
@@ -364,44 +350,44 @@ const StaffReport = () => {
     document.body.removeChild(link);
   };
 
-  // Filter component
+  // Filter component with wider dropdowns for PC optimization
   const FiltersComponent = () => (
     <Box sx={{ width: "100%" }}>
       <Grid container spacing={2}>
         {/* Date Range Filters */}
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DatePicker
               label="From Date"
               value={dateFrom}
               onChange={setDateFrom}
-              renderInput={(params) => <TextField {...params} fullWidth size="small" />}
               maxDate={dateTo}
               inputFormat="MM/dd/yyyy"
               slotProps={{
                 textField: { fullWidth: true, size: "small" }
               }}
+              sx={{ width: "100%" }}
             />
           </LocalizationProvider>
         </Grid>
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DatePicker
               label="To Date"
               value={dateTo}
               onChange={setDateTo}
-              renderInput={(params) => <TextField {...params} fullWidth size="small" />}
               minDate={dateFrom}
               inputFormat="MM/dd/yyyy"
               slotProps={{
                 textField: { fullWidth: true, size: "small" }
               }}
+              sx={{ width: "100%" }}
             />
           </LocalizationProvider>
         </Grid>
         
-        {/* Staff Selection */}
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        {/* Staff Selection - Wider dropdown */}
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <FormControl fullWidth>
             <Autocomplete
               size="small"
@@ -412,13 +398,15 @@ const StaffReport = () => {
               options={staffList}
               renderInput={(params) => <TextField {...params} label="Staff" />}
               disableCloseOnSelect
-              limitTags={1}
+              limitTags={2}
+              sx={{ minWidth: "300px", width: "100%" }}
+              listboxProps={{ style: { maxHeight: '250px' } }}
             />
           </FormControl>
         </Grid>
         
-        {/* Client Selection */}
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        {/* Client Selection - Wider dropdown */}
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <FormControl fullWidth>
             <Autocomplete
               size="small"
@@ -429,13 +417,15 @@ const StaffReport = () => {
               options={clientList}
               renderInput={(params) => <TextField {...params} label="Clients" />}
               disableCloseOnSelect
-              limitTags={1}
+              limitTags={2}
+              sx={{ minWidth: "300px", width: "100%" }}
+              listboxProps={{ style: { maxHeight: '250px' } }}
             />
           </FormControl>
         </Grid>
         
-        {/* Group Selection - New */}
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        {/* Group Selection - Wider dropdown */}
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <FormControl fullWidth>
             <Autocomplete
               size="small"
@@ -446,13 +436,15 @@ const StaffReport = () => {
               options={groupList}
               renderInput={(params) => <TextField {...params} label="Groups" />}
               disableCloseOnSelect
-              limitTags={1}
+              limitTags={2}
+              sx={{ minWidth: "300px", width: "100%" }}
+              listboxProps={{ style: { maxHeight: '250px' } }}
             />
           </FormControl>
         </Grid>
         
-        {/* Assignment Selection */}
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        {/* Assignment Selection - Wider dropdown */}
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <FormControl fullWidth>
             <Autocomplete
               size="small"
@@ -463,13 +455,15 @@ const StaffReport = () => {
               options={assignmentList}
               renderInput={(params) => <TextField {...params} label="Assignments" />}
               disableCloseOnSelect
-              limitTags={1}
+              limitTags={2}
+              sx={{ minWidth: "300px", width: "100%" }}
+              listboxProps={{ style: { maxHeight: '250px' } }}
             />
           </FormControl>
         </Grid>
         
-        {/* Financial Year Selection */}
-        <Grid item xs={12} sm={6} md={3} lg={2}>
+        {/* Financial Year Selection - Wider dropdown */}
+        <Grid item xs={12} sm={6} md={4} lg={3}>
           <FormControl fullWidth>
             <Autocomplete
               size="small"
@@ -480,7 +474,9 @@ const StaffReport = () => {
               options={financialYearList}
               renderInput={(params) => <TextField {...params} label="Financial Years" />}
               disableCloseOnSelect
-              limitTags={1}
+              limitTags={2}
+              sx={{ minWidth: "300px", width: "100%" }}
+              listboxProps={{ style: { maxHeight: '250px' } }}
             />
           </FormControl>
         </Grid>
@@ -505,7 +501,7 @@ const StaffReport = () => {
         <AppBar position="static" color="default" elevation={0} sx={{ mb: 2 }}>
           <Toolbar sx={{ flexWrap: 'wrap' }}>
             <Typography variant="h5" component="h1" fontWeight="bold" sx={{ flexGrow: 1, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
-              Staff Report
+              TIME AND COST REPORT
             </Typography>
             {isMobile && (
               <IconButton 
@@ -684,7 +680,7 @@ const StaffReport = () => {
               width: '100%',
               overflowX: 'auto',
               '& .MuiTable-root': {
-                minWidth: isMobile ? 500 : 1100,
+                minWidth: isMobile ? 500 : 1000,
                 width: '100%'
               }
             }}
@@ -699,7 +695,6 @@ const StaffReport = () => {
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
                   {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
                   {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>TimeStamp</TableCell>}
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
                   {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
@@ -729,9 +724,6 @@ const StaffReport = () => {
                       </TableCell>
                     )}
                     {!isMobile && <TableCell>{work.Financial_Year || "N/A"}</TableCell>}
-                    {!isMobile && (
-                      <TableCell>{formatTimestamp(work.TimeStamp)}</TableCell>
-                    )}
                     <TableCell>{work.Hours || "N/A"}</TableCell>
                     {!isMobile && (
                       <TableCell>
@@ -750,7 +742,7 @@ const StaffReport = () => {
               </TableBody>
               <TableFooter>
                 <TableRow sx={{ backgroundColor: "grey.100" }}>
-                  <TableCell colSpan={isMobile ? 3 : 9} align="right" sx={{ fontWeight: "bold" }}>
+                  <TableCell colSpan={isMobile ? 3 : 8} align="right" sx={{ fontWeight: "bold" }}>
                     Totals:
                   </TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>
@@ -797,4 +789,4 @@ const StaffReport = () => {
   );
 };
 
-export default withAuth(StaffReport)
+export default withAuth(StaffReport);

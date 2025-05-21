@@ -312,7 +312,7 @@ const AssignmentReport = () => {
             fontWeight="bold"
             sx={{ textAlign: { xs: 'center', sm: 'left' } }}
           >
-            Staff Work Hours
+            DAILY ATTENDANCE SUMMARY
           </Typography>
           <Button 
             variant="contained" 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import withAuth from "../../components/withAuth";
+import { financialYears } from "../../lib/dataLists";
 import {
   Table,
   TableBody,
@@ -117,8 +118,12 @@ const StaffReport = () => {
       
       // Extract unique assignments and financial years from data
       const uniqueAssignments = [...new Set(filteredByPresence.map(item => item.Assignment).filter(Boolean))];
-      const uniqueFinancialYears = [...new Set(filteredByPresence.map(item => item.Financial_Year).filter(Boolean))];
-      
+      const uniqueFinancialYears = [...new Set(
+        filteredByPresence
+        .map(item => item.Financial_Year)
+        .filter(year => financialYears.includes(year))
+        )];
+
       setAssignmentList(uniqueAssignments.sort());
       setFinancialYearList(uniqueFinancialYears.sort());
       
@@ -666,7 +671,7 @@ const StaffReport = () => {
             elevation={2}
             sx={{ width: '100%' }}
           >
-            <Table size="small" aria-label="staff report table" sx={{ minWidth: 1000 }}>
+            <Table size="small" aria-label="staff report table" sx={{ minWidth: 900  }}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "primary.light" }}>
                   <TableCell sx={{ fontWeight: "bold", color: "white", width:"150px",minWidth:"150px" }}>Name</TableCell>

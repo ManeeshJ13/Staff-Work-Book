@@ -29,7 +29,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { addDays, format, startOfDay, isSameDay } from 'date-fns';
+import { addDays, subDays, format, startOfDay, isSameDay } from 'date-fns';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import TodayIcon from '@mui/icons-material/Today';
@@ -46,8 +46,8 @@ const AssignmentReport = () => {
   
   const [staffData, setStaffData] = useState([]);
   const [dateRange, setDateRange] = useState([]);
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(addDays(new Date(), isMobile ? 2 : isTablet ? 4 : 6));
+  const [startDate, setStartDate] = useState(new Date()); // Today
+  const [endDate, setEndDate] = useState(subDays(new Date(), 6)); // 1 week ago (7 days total including today)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [summaryData, setSummaryData] = useState({});
@@ -62,15 +62,16 @@ const AssignmentReport = () => {
     return format(date, 'yyyy-MM-dd');
   };
 
-  // Generate array of dates between start and end - memoized to prevent unnecessary recalculations
+  // Generate array of dates between start and end in reverse order (today first)
   const memoizedDateRange = useMemo(() => {
     const dates = [];
     let currentDate = startOfDay(startDate);
     const end = startOfDay(endDate);
     
-    while (currentDate <= end) {
+    // Generate dates from start to end
+    while (currentDate >= end) {
       dates.push(currentDate);
-      currentDate = addDays(currentDate, 1);
+      currentDate = subDays(currentDate, 1);
     }
     
     return dates;
@@ -90,11 +91,12 @@ const AssignmentReport = () => {
         setLoading(true);
         setError(null);
         
+        // Use endDate as the earlier date and startDate as the later date for the query
         const { data: periodWorkData, error: workError } = await supabase
           .from("Staff Work")
           .select("*")
-          .gte("Date", formatQueryDate(startDate))
-          .lte("Date", formatQueryDate(endDate));
+          .gte("Date", formatQueryDate(endDate))
+          .lte("Date", formatQueryDate(startDate));
         
         if (workError) throw workError;
         
@@ -177,37 +179,35 @@ const AssignmentReport = () => {
   const handleStartDateChange = (newDate) => {
     if (newDate) {
       setStartDate(newDate);
-      if (newDate > endDate) {
-        setEndDate(addDays(newDate, isMobile ? 2 : isTablet ? 4 : 6));
-      }
+      // Ensure endDate is always 6 days before startDate
+      setEndDate(subDays(newDate, 6));
     }
   };
 
   const handleEndDateChange = (newDate) => {
     if (newDate) {
-      if (newDate < startDate) {
-        setStartDate(newDate);
-      }
       setEndDate(newDate);
+      // Ensure startDate is always 6 days after endDate
+      setStartDate(addDays(newDate, 6));
     }
   };
 
   const handlePreviousPeriod = () => {
-    const daysDifference = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
-    setStartDate(addDays(startDate, -daysDifference - 1));
-    setEndDate(addDays(endDate, -daysDifference - 1));
+    // Move 7 days back
+    setStartDate(subDays(startDate, 7));
+    setEndDate(subDays(endDate, 7));
   };
 
   const handleNextPeriod = () => {
-    const daysDifference = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
-    setStartDate(addDays(startDate, daysDifference + 1));
-    setEndDate(addDays(endDate, daysDifference + 1));
+    // Move 7 days forward
+    setStartDate(addDays(startDate, 7));
+    setEndDate(addDays(endDate, 7));
   };
 
   const handleToday = () => {
     const today = new Date();
     setStartDate(today);
-    setEndDate(addDays(today, isMobile ? 2 : isTablet ? 4 : 6));
+    setEndDate(subDays(today, 6));
   };
 
   const renderCell = (staffName, date) => {
@@ -267,7 +267,7 @@ const AssignmentReport = () => {
                 <Grid item xs={4} key={idx}>
                   <Box 
                     sx={{ 
-                      p: 0.5,  // Reduced padding
+                      p: 0.5,
                       textAlign: 'center',
                       border: isToday ? `1px solid ${theme.palette.primary.main}` : '1px solid #e0e0e0',
                       borderRadius: 1,
@@ -296,18 +296,18 @@ const AssignmentReport = () => {
 
   return (
     <Box sx={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
-      <Box sx={{ p: { xs: 1, sm: 2 }, maxWidth: '1200px', mx: 'auto' }}> {/* Reduced padding */}
+      <Box sx={{ p: { xs: 1, sm: 2 }, maxWidth: '1200px', mx: 'auto' }}>
         {/* Header with responsive layout */}
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          mb: 2,  // Reduced margin
+          mb: 2,
           flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1, sm: 0 }  // Reduced gap
+          gap: { xs: 1, sm: 0 }
         }}>
           <Typography 
-            variant={isMobile ? "h6" : "h5"}  // Smaller typography
+            variant={isMobile ? "h6" : "h5"}
             component="h1" 
             fontWeight="bold"
             sx={{ textAlign: { xs: 'center', sm: 'left' } }}
@@ -320,30 +320,30 @@ const AssignmentReport = () => {
             component={Link} 
             to="/admindash"
             startIcon={isMobile ? <HomeIcon /> : null}
-            size={isMobile ? "small" : "medium"}  // Smaller button
+            size={isMobile ? "small" : "medium"}
           >
             {isMobile ? "Home" : "Back to Dashboard"}
           </Button>
         </Box>
 
         {/* Date Range Selection - more compact */}
-        <Paper elevation={2} sx={{ mb: 2, p: { xs: 1, sm: 2 } }}>  {/* Reduced padding */}
+        <Paper elevation={2} sx={{ mb: 2, p: { xs: 1, sm: 2 } }}>
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: 1,  // Reduced gap
+            gap: 1,
             alignItems: { xs: 'stretch', sm: 'center' },
             justifyContent: 'space-between',
-            mb: 1  // Reduced margin
+            mb: 1
           }}>
-            <Typography variant="subtitle1" fontWeight="medium">  {/* Smaller typography */}
+            <Typography variant="subtitle1" fontWeight="medium">
               Select Period
             </Typography>
             
-            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: { xs: 'center', sm: 'flex-end' } }}>  {/* Reduced gap */}
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: { xs: 'center', sm: 'flex-end' } }}>
               <Tooltip title="Previous Period">
-                <IconButton onClick={handlePreviousPeriod} color="primary" size="small">  // Smaller buttons
-                  <NavigateBeforeIcon fontSize="small" />  // Smaller icons
+                <IconButton onClick={handlePreviousPeriod} color="primary" size="small">
+                  <NavigateBeforeIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Today">
@@ -363,7 +363,7 @@ const AssignmentReport = () => {
             <Box sx={{ 
               display: 'flex', 
               flexDirection: { xs: 'column', sm: 'row' },
-              gap: 1,  // Reduced gap
+              gap: 1,
               width: '100%'
             }}>
               <DatePicker
@@ -374,7 +374,7 @@ const AssignmentReport = () => {
                 slotProps={{ 
                   textField: { 
                     fullWidth: true,
-                    size: 'small'  // Smaller input
+                    size: 'small'
                   } 
                 }}
               />
@@ -386,7 +386,7 @@ const AssignmentReport = () => {
                 slotProps={{ 
                   textField: { 
                     fullWidth: true,
-                    size: 'small'  // Smaller input
+                    size: 'small'
                   } 
                 }}
               />
@@ -395,30 +395,30 @@ const AssignmentReport = () => {
           
           {/* Period display */}
           <Box sx={{ 
-            mt: 1,  // Reduced margin
-            p: 1,  // Reduced padding
+            mt: 1,
+            p: 1,
             bgcolor: 'primary.light', 
             color: 'primary.contrastText',
             borderRadius: 1,
             textAlign: 'center'
           }}>
-            <Typography variant="body2" fontWeight="medium">  // Smaller typography
-              {formatDisplayDate(startDate)} to {formatDisplayDate(endDate)}
+            <Typography variant="body2" fontWeight="medium">
+              {formatDisplayDate(endDate)} to {formatDisplayDate(startDate)}
             </Typography>
           </Box>
         </Paper>
 
         {/* Legend - made more compact */}
         <Box sx={{ 
-          mb: 2,  // Reduced margin
+          mb: 2,
           display: 'flex', 
-          gap: 1,  // Reduced gap
+          gap: 1,
           flexWrap: 'wrap',
           justifyContent: { xs: 'center', sm: 'flex-start' }
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>  // Reduced gap
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(25, 118, 210, 0.15)', border: '1px solid #1976d2' }}></Box>
-            <Typography variant="caption" color="black">Leave</Typography>  // Smaller text
+            <Typography variant="caption" color="black">Leave</Typography>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(255, 235, 59, 0.3)', border: '1px solid #f57c00' }}></Box>
@@ -427,14 +427,14 @@ const AssignmentReport = () => {
         </Box>
  
         {loading ? (
-          <Box sx={{ textAlign: 'center', py: 2 }}>  // Reduced padding
-            <CircularProgress size={24} />  // Smaller spinner
-            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>  // Smaller text
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
               Loading work data...
             </Typography>
           </Box>
         ) : error ? (
-          <Alert severity="error" sx={{ mb: 2 }}>  // Reduced margin
+          <Alert severity="error" sx={{ mb: 2 }}>
             <AlertTitle>Error</AlertTitle>
             {error}
           </Alert>
@@ -442,30 +442,28 @@ const AssignmentReport = () => {
           <>
             {/* Mobile view */}
             {isMobile && (
-              <Box sx={{ mt: 1 }}>  // Reduced margin
+              <Box sx={{ mt: 1 }}>
                 {Object.keys(summaryData).sort().map((staffName, index) => (
                   <StaffMobileCard key={index} staffName={staffName} />
                 ))}
               </Box>
             )}
             
-            {/* Desktop view - made more compact */}
+            {/* Desktop view - removed scrollable container */}
             {!isMobile && (
               <TableContainer component={Paper} elevation={2} sx={{ 
                 overflowX: 'auto',
-                maxHeight: 'calc(100vh - 300px)',  // Limit height
                 '& .MuiTableCell-root': {
-                  py: 0.5,  // Reduced cell padding
-                  px: 1,    // Reduced cell padding
+                  py: 0.5,
+                  px: 1,
                 }
               }}>
                 <Table 
                   aria-label="staff work hours table" 
-                  size="small"  // Always use small size
-                  stickyHeader
+                  size="small"
                   sx={{
                     '& .MuiTableCell-head': {
-                      py: 1,  // Slightly more padding for headers
+                      py: 1,
                     }
                   }}
                 >
@@ -479,7 +477,7 @@ const AssignmentReport = () => {
                           bgcolor: 'grey.100',
                           zIndex: 1,
                           minWidth: '120px',
-                          py: 1  // Consistent padding
+                          py: 1
                         }}
                       >
                         Staff Name
@@ -492,14 +490,14 @@ const AssignmentReport = () => {
                             sx={{ 
                               fontWeight: isToday ? 'bold' : 'medium', 
                               textAlign: 'center',
-                              minWidth: '70px',  // Reduced min width
+                              minWidth: '70px',
                               ...(isToday && { 
                                 borderBottom: `2px solid ${theme.palette.primary.main}`,
                                 color: theme.palette.primary.main
                               })
                             }}
                           >
-                            <Typography variant="caption" fontWeight="inherit">  // Smaller text
+                            <Typography variant="caption" fontWeight="inherit">
                               {formatDisplayDate(date)}
                             </Typography>
                           </TableCell>
@@ -514,7 +512,7 @@ const AssignmentReport = () => {
                         hover
                         sx={{ 
                           '&:last-child td, &:last-child th': { border: 0 },
-                          height: '40px'  // Fixed row height
+                          height: '40px'
                         }}
                       >
                         <TableCell 
@@ -525,10 +523,10 @@ const AssignmentReport = () => {
                             bgcolor: 'background.paper',
                             zIndex: 1,
                             boxShadow: '2px 0px 3px rgba(0,0,0,0.05)',
-                            py: 1  // Consistent padding
+                            py: 1
                           }}
                         >
-                          <Typography variant="body2" noWrap>  // Smaller text with no wrap
+                          <Typography variant="body2" noWrap>
                             {staffName}
                           </Typography>
                         </TableCell>
@@ -540,10 +538,10 @@ const AssignmentReport = () => {
                               align="center"
                               sx={{
                                 ...cellData.style,
-                                py: 0.5  // Consistent padding
+                                py: 0.5
                               }}
                             >
-                              <Typography variant="body2">  // Smaller text
+                              <Typography variant="body2">
                                 {cellData.content}
                               </Typography>
                             </TableCell>
@@ -560,12 +558,12 @@ const AssignmentReport = () => {
           <Paper 
             elevation={1} 
             sx={{ 
-              p: { xs: 2, sm: 3 },  // Reduced padding
+              p: { xs: 2, sm: 3 },
               textAlign: 'center',
               bgcolor: 'grey.50'
             }}
           >
-            <Typography variant="body1" color="text.secondary">  // Smaller text
+            <Typography variant="body1" color="text.secondary">
               No Staff Data Available
             </Typography>
           </Paper>

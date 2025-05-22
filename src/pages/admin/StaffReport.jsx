@@ -494,209 +494,190 @@ const StaffReport = () => {
     </Box>
   );
 
-  return (
-    <Box sx={{ maxWidth: "100%", overflow: "hidden" }}>
-      <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "1400px", mx: "auto" }}>
-        {/* Header with title and home button */}
-        <AppBar position="static" color="default" elevation={0} sx={{ mb: 2 }}>
-          <Toolbar sx={{ flexWrap: 'wrap' }}>
-            <Typography variant="h5" component="h1" fontWeight="bold" sx={{ flexGrow: 1, fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
-              TIME AND COST REPORT
-            </Typography>
-            {isMobile && (
-              <IconButton 
-                edge="end" 
-                color="primary" 
-                onClick={() => setFilterDrawerOpen(true)}
-                sx={{ mr: 1 }}
-              >
-                <FilterListIcon />
-              </IconButton>
-            )}
-            <Button 
-              component={Link} 
-              to="/admindash" 
-              variant="contained" 
-              color="primary"
-              size={isSmallMobile ? "small" : "medium"}
-            >
-              Home
-            </Button>
-          </Toolbar>
-        </AppBar>
+ return (
+  <Box sx={{ maxWidth: "100%", overflow: "hidden" }}>
+    <Box sx={{ p: 3, maxWidth: "1400px", mx: "auto" }}>
+      {/* Header with title and home button */}
+      <AppBar position="static" color="default" elevation={0} sx={{ mb: 2 }}>
+        <Toolbar>
+          <Typography variant="h5" component="h1" fontWeight="bold" sx={{ flexGrow: 1 }}>
+            TIME AND COST REPORT
+          </Typography>
+          <Button 
+            component={Link} 
+            to="/admindash" 
+            variant="contained" 
+            color="primary"
+          >
+            Home
+          </Button>
+        </Toolbar>
+      </AppBar>
 
-        {/* Filter section - only shown on desktop */}
-        {!isMobile && (
-          <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <FiltersComponent />
-            </LocalizationProvider>
-          </Paper>
-        )}
+      {/* Filter section */}
+      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <FiltersComponent />
+        </LocalizationProvider>
+      </Paper>
 
-        {/* Active filters display */}
-        <Box sx={{ mb: 3, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
-          <Typography variant="subtitle1" sx={{ mr: 1 }}>Active Filters:</Typography>
-          
-          {selectedStaff.length === 0 && 
-           selectedClients.length === 0 && 
-           selectedGroups.length === 0 &&
-           selectedAssignments.length === 0 && 
-           selectedFinancialYears.length === 0 && 
-           !dateFrom && 
-           !dateTo ? (
-            <Typography variant="body2" color="text.secondary">None</Typography>
-          ) : (
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {dateFrom && (
-                <Chip 
-                  label={`From: ${dateFrom.toLocaleDateString()}`} 
-                  size="small" 
-                  onDelete={() => setDateFrom(null)} 
-                />
-              )}
-              
-              {dateTo && (
-                <Chip 
-                  label={`To: ${dateTo.toLocaleDateString()}`} 
-                  size="small" 
-                  onDelete={() => setDateTo(null)} 
-                />
-              )}
-              
-              {selectedStaff.map(staff => (
-                <Chip 
-                  key={`staff-${staff}`}
-                  label={`Staff: ${staff}`} 
-                  size="small" 
-                  onDelete={() => setSelectedStaff(prev => prev.filter(s => s !== staff))} 
-                />
-              ))}
-              
-              {selectedClients.map(client => (
-                <Chip 
-                  key={`client-${client}`}
-                  label={`Client: ${client}`} 
-                  size="small" 
-                  onDelete={() => setSelectedClients(prev => prev.filter(c => c !== client))} 
-                />
-              ))}
-              
-              {selectedGroups.map(group => (
-                <Chip 
-                  key={`group-${group}`}
-                  label={`Group: ${group}`} 
-                  size="small" 
-                  onDelete={() => setSelectedGroups(prev => prev.filter(g => g !== group))} 
-                />
-              ))}
-              
-              {selectedAssignments.map(assignment => (
-                <Chip 
-                  key={`assignment-${assignment}`}
-                  label={`Assignment: ${assignment}`} 
-                  size="small" 
-                  onDelete={() => setSelectedAssignments(prev => prev.filter(a => a !== assignment))} 
-                />
-              ))}
-              
-              {selectedFinancialYears.map(year => (
-                <Chip 
-                  key={`year-${year}`}
-                  label={`FY: ${year}`} 
-                  size="small" 
-                  onDelete={() => setSelectedFinancialYears(prev => prev.filter(y => y !== year))} 
-                />
-              ))}
-              
-              <IconButton size="small" onClick={clearAllFilters} title="Clear all filters">
-                <ClearIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          )}
-        </Box>
-
-        {/* Summary Cards showing total cost and hours */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={4}>
-            <Card raised sx={{ bgcolor: "primary.light", color: "white" }}>
-              <CardContent>
-                <Typography variant="body1">Total Cost: ₹{totalCost.toFixed(2)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={4}>
-            <Card raised sx={{ bgcolor: "primary.light", color: "white" }}>
-              <CardContent>
-                <Typography variant="body1">Total Hours: {totalHours.toFixed(2)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography variant="body1">
-                  Showing {filteredData.length} entries
-                </Typography>
-                <Tooltip title="Export to CSV">
-                  <IconButton 
-                    color="primary" 
-                    onClick={exportToCSV}
-                    disabled={filteredData.length === 0}
-                  >
-                    <FileDownloadIcon />
-                  </IconButton>
-                </Tooltip>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Data table */}
-        {loading ? (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 4 }}>
-            <CircularProgress size={60} />
-            <Typography sx={{ mt: 2, color: "text.secondary" }}>Loading report data...</Typography>
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
-        ) : filteredData.length === 0 ? (
-          <Box sx={{ textAlign: "center", py: 4, bgcolor: "background.paper", borderRadius: 1, border: "1px dashed", borderColor: "divider" }}>
-            <Typography variant="h6" color="text.secondary">No data available for the selected filters</Typography>
-            <Button 
-              variant="outlined" 
-              color="primary" 
-              sx={{ mt: 2 }}
-              onClick={clearAllFilters}
-            >
-              Clear All Filters
-            </Button>
-          </Box>
+      {/* Active filters display */}
+      <Box sx={{ mb: 3, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}>
+        <Typography variant="subtitle1" sx={{ mr: 1 }}>Active Filters:</Typography>
+        
+        {selectedStaff.length === 0 && 
+         selectedClients.length === 0 && 
+         selectedGroups.length === 0 &&
+         selectedAssignments.length === 0 && 
+         selectedFinancialYears.length === 0 && 
+         !dateFrom && 
+         !dateTo ? (
+          <Typography variant="body2" color="text.secondary">None</Typography>
         ) : (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            {dateFrom && (
+              <Chip 
+                label={`From: ${dateFrom.toLocaleDateString()}`} 
+                size="small" 
+                onDelete={() => setDateFrom(null)} 
+              />
+            )}
+            
+            {dateTo && (
+              <Chip 
+                label={`To: ${dateTo.toLocaleDateString()}`} 
+                size="small" 
+                onDelete={() => setDateTo(null)} 
+              />
+            )}
+            
+            {selectedStaff.map(staff => (
+              <Chip 
+                key={`staff-${staff}`}
+                label={`Staff: ${staff}`} 
+                size="small" 
+                onDelete={() => setSelectedStaff(prev => prev.filter(s => s !== staff))} 
+              />
+            ))}
+            
+            {selectedClients.map(client => (
+              <Chip 
+                key={`client-${client}`}
+                label={`Client: ${client}`} 
+                size="small" 
+                onDelete={() => setSelectedClients(prev => prev.filter(c => c !== client))} 
+              />
+            ))}
+            
+            {selectedGroups.map(group => (
+              <Chip 
+                key={`group-${group}`}
+                label={`Group: ${group}`} 
+                size="small" 
+                onDelete={() => setSelectedGroups(prev => prev.filter(g => g !== group))} 
+              />
+            ))}
+            
+            {selectedAssignments.map(assignment => (
+              <Chip 
+                key={`assignment-${assignment}`}
+                label={`Assignment: ${assignment}`} 
+                size="small" 
+                onDelete={() => setSelectedAssignments(prev => prev.filter(a => a !== assignment))} 
+              />
+            ))}
+            
+            {selectedFinancialYears.map(year => (
+              <Chip 
+                key={`year-${year}`}
+                label={`FY: ${year}`} 
+                size="small" 
+                onDelete={() => setSelectedFinancialYears(prev => prev.filter(y => y !== year))} 
+              />
+            ))}
+            
+            <IconButton size="small" onClick={clearAllFilters} title="Clear all filters">
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
+      </Box>
+
+      {/* Summary Cards showing total cost and hours */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card raised sx={{ bgcolor: "primary.light", color: "white" }}>
+            <CardContent>
+              <Typography variant="body1">Total Cost: ₹{totalCost.toFixed(2)}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card raised sx={{ bgcolor: "primary.light", color: "white" }}>
+            <CardContent>
+              <Typography variant="body1">Total Hours: {totalHours.toFixed(2)}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Typography variant="body1">
+                Showing {filteredData.length} entries
+              </Typography>
+              <Tooltip title="Export to CSV">
+                <IconButton 
+                  color="primary" 
+                  onClick={exportToCSV}
+                  disabled={filteredData.length === 0}
+                >
+                  <FileDownloadIcon />
+                </IconButton>
+              </Tooltip>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Data table */}
+      {loading ? (
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 4 }}>
+          <CircularProgress size={60} />
+          <Typography sx={{ mt: 2, color: "text.secondary" }}>Loading report data...</Typography>
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>
+      ) : filteredData.length === 0 ? (
+        <Box sx={{ textAlign: "center", py: 4, bgcolor: "background.paper", borderRadius: 1, border: "1px dashed", borderColor: "divider" }}>
+          <Typography variant="h6" color="text.secondary">No data available for the selected filters</Typography>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            sx={{ mt: 2 }}
+            onClick={clearAllFilters}
+          >
+            Clear All Filters
+          </Button>
+        </Box>
+      ) : (
+        <Box sx={{ width: '100%', overflowX: 'auto' }}>
           <TableContainer 
             component={Paper} 
-            elevation={2} 
-            sx={{ 
-              width: '100%',
-              overflowX: 'auto',
-              '& .MuiTable-root': {
-                minWidth: isMobile ? 500 : 1000,
-                width: '100%'
-              }
-            }}
+            elevation={2}
+            sx={{ width: '100%' }}
           >
-            <Table size="small" aria-label="staff report table">
+            <Table size="small" aria-label="staff report table" sx={{ minWidth: 1000 }}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "primary.light" }}>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white", width:"150px",minWidth:"150px" }}>Name</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Group</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Group</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white",width:"80px",minWidth:"80px" }}>Year</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
                 </TableRow>
               </TableHead>
@@ -709,46 +690,41 @@ const StaffReport = () => {
                   >
                     <TableCell>{work.Name || "N/A"}</TableCell>
                     <TableCell>{formatDate(work.Date)}</TableCell>
-                    {!isMobile && <TableCell>{work.Client || "N/A"}</TableCell>}
-                    {!isMobile && <TableCell>{getClientGroup(work.Client)}</TableCell>}
-                    <TableCell sx={{ maxWidth: isMobile ? 100 : 'none', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <TableCell>{work.Client || "N/A"}</TableCell>
+                    <TableCell>{getClientGroup(work.Client)}</TableCell>
+                    <TableCell>
                       <Tooltip title={work.Assignment || "N/A"}>
                         <span>{work.Assignment || "N/A"}</span>
                       </Tooltip>
                     </TableCell>
-                    {!isMobile && (
-                      <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        <Tooltip title={work.Work_Done || "N/A"}>
-                          <span>{work.Work_Done || "N/A"}</span>
-                        </Tooltip>
-                      </TableCell>
-                    )}
-                    {!isMobile && <TableCell>{work.Financial_Year || "N/A"}</TableCell>}
+                    <TableCell>
+                      <Tooltip title={work.Work_Done || "N/A"}>
+                        <span>{work.Work_Done || "N/A"}</span>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>{work.Financial_Year || "N/A"}</TableCell>
                     <TableCell>{work.Hours || "N/A"}</TableCell>
-                    {!isMobile && (
-                      <TableCell>
-                        {work.Completion === true ? (
-                          <Chip size="small" label="Yes" color="success" />
-                        ) : work.Completion === false ? (
-                          <Chip size="small" label="No" color="warning" />
-                        ) : (
-                          "N/A"
-                        )}
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      {work.Completion === true ? (
+                        <Chip size="small" label="Yes" color="success" />
+                      ) : work.Completion === false ? (
+                        <Chip size="small" label="No" color="warning" />
+                      ) : (
+                        "N/A"
+                      )}
+                    </TableCell>
                     <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow sx={{ backgroundColor: "grey.100" }}>
-                  <TableCell colSpan={isMobile ? 3 : 8} align="right" sx={{ fontWeight: "bold" }}>
+                  <TableCell colSpan={8} align="right" sx={{ fontWeight: "bold" }}>
                     Totals:
                   </TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>
                     {totalHours.toFixed(2)}
                   </TableCell>
-                  {!isMobile && <TableCell />}
                   <TableCell sx={{ fontWeight: "bold" }}>
                     ₹{totalCost.toFixed(2)}
                   </TableCell>
@@ -756,37 +732,11 @@ const StaffReport = () => {
               </TableFooter>
             </Table>
           </TableContainer>
-        )}
-
-        {/* Filter Drawer for mobile */}
-        <Drawer
-          anchor="right"
-          open={filterDrawerOpen}
-          onClose={() => setFilterDrawerOpen(false)}
-          sx={{
-            '& .MuiDrawer-paper': { width: '85%', maxWidth: '360px', p: 2 },
-          }}
-        >
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" sx={{ mb: 3 }}>Report Filters</Typography>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <FiltersComponent />
-            </LocalizationProvider>
-            <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-              <Button onClick={() => setFilterDrawerOpen(false)}>Close</Button>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                onClick={() => setFilterDrawerOpen(false)}
-              >
-                Apply
-              </Button>
-            </Box>
-          </Box>
-        </Drawer>
-      </Box>
+        </Box>
+      )}
     </Box>
-  );
+  </Box>
+);
 };
 
 export default withAuth(StaffReport);

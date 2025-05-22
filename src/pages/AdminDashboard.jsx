@@ -283,67 +283,85 @@ const AdminLayout = () => {
       }}>
         {isHome ? (
           <Container maxWidth="xl" sx={{ my: { xs: 1, sm: 2, md: 3 } }}>
-            <Grid container spacing={{ xs: 2, md: 3 }}>
+            {/* Optimized Grid Layout */}
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: 'repeat(2, 1fr)', // 2 columns on mobile
+                sm: 'repeat(3, 1fr)', // 3 columns on small tablets
+                md: 'repeat(6, 1fr)', // 6 columns on medium+ screens
+                lg: 'repeat(6, 1fr)', // Keep 6 columns on large screens
+                xl: 'repeat(6, 1fr)'  // Keep 6 columns on extra large screens
+              },
+              gap: { xs: 2, sm: 2.5, md: 3 },
+              justifyItems: 'stretch',
+              alignItems: 'stretch'
+            }}>
               {adminMenuItems.map((item) => (
-                <Grid item xs={6} sm={4} md={4} lg={2} key={item.text}>
-                  <Card 
-                    component={Link} 
-                    to={item.path}
-                    sx={{ 
-                      height: '100%',
-                      display: 'flex', 
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      p: { xs: 1.5, sm: 2 },
-                      textDecoration: 'none',
-                      color: 'inherit',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 4,
-                      },
-                      borderRadius: 2,
-                      minHeight: { xs: 90, sm: 110, md: 130 },
-                    }}
-                  >
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '100%',
-                      textAlign: 'center'
-                    }}>
-                      {React.cloneElement(item.icon, { 
-                        sx: { 
-                          fontSize: { xs: 28, sm: 32, md: 36 }, 
-                          color: 'primary.main', 
-                          mb: { xs: 0.5, sm: 1 } 
-                        } 
-                      })}
-                      <Typography 
-                        variant="body1" 
-                        align="center" 
-                        color="textPrimary"
-                        sx={{
-                          mt: 0.5,
-                          fontWeight: 500,
-                          fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.95rem' },
-                          WebkitLineClamp: 2,
-                          display: '-webkit-box',
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {item.text}
-                      </Typography>
-                    </Box>
-                  </Card>
-                </Grid>
+                <Card 
+                  key={item.text}
+                  component={Link} 
+                  to={item.path}
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: { xs: 1.5, sm: 2, md: 2.5 },
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 6,
+                    },
+                    borderRadius: 2,
+                    minHeight: { xs: 100, sm: 120, md: 140 },
+                    aspectRatio: '1',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                    textAlign: 'center',
+                    gap: { xs: 0.5, sm: 1 }
+                  }}>
+                    {React.cloneElement(item.icon, { 
+                      sx: { 
+                        fontSize: { xs: 24, sm: 28, md: 32, lg: 36 }, 
+                        color: 'primary.main',
+                        flexShrink: 0
+                      } 
+                    })}
+                    <Typography 
+                      variant="body2" 
+                      align="center" 
+                      color="textPrimary"
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.85rem', lg: '0.9rem' },
+                        lineHeight: 1.2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        wordBreak: 'break-word',
+                        hyphens: 'auto'
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                  </Box>
+                </Card>
               ))}
-            </Grid>
+            </Box>
             
             {/* Additional dashboard content would go here */}
           </Container>

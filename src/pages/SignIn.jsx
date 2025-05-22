@@ -63,6 +63,10 @@ const SignIn = () => {
 
   const handleNameChange = (event, newValue) => {
     setName(newValue || "");
+    // Clear any existing errors when user changes selection
+    if (error) {
+      setError("");
+    }
   };
 
   const handleSignIn = (e) => {
@@ -182,14 +186,31 @@ const SignIn = () => {
               options={staffOptions}
               value={name}
               onChange={handleNameChange}
+              onInputChange={(event, newInputValue) => {
+                // This handles direct typing in the input field
+                setName(newInputValue);
+              }}
               fullWidth
+              freeSolo // Allows typing values not in the list (like 'admin')
+              autoComplete
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false} // Don't clear on blur - allows keeping typed values like 'admin'
+              handleHomeEndKeys
+              filterOptions={(options, { inputValue }) => {
+                // Custom filter for case-insensitive search
+                return options.filter(option =>
+                  option.toLowerCase().includes(inputValue.toLowerCase())
+                );
+              }}
               renderInput={(params) => (
                 <TextField 
                   {...params} 
                   margin="normal"
                   required
                   label="Staff Name" 
-                  helperText="Select your name from the dropdown"
+                  helperText="Type to search staff names"
+                  placeholder="Start typing to search or enter username..."
                   InputLabelProps={{
                     sx: {
                       fontSize: { xs: '0.875rem', sm: '1rem' }
@@ -200,12 +221,19 @@ const SignIn = () => {
                       fontSize: { xs: '0.875rem', sm: '1rem' }
                     }
                   }}
-                  inputProps={{
-                    ...params.inputProps,
-                    value: name, // Allow direct input even if not in options list
-                    onChange: (e) => setName(e.target.value) // Handle direct text input
-                  }}
                 />
+              )}
+              renderOption={(props, option) => (
+                <Box 
+                  component="li" 
+                  {...props}
+                  sx={{
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    padding: { xs: '8px 12px', sm: '10px 16px' }
+                  }}
+                >
+                  {option}
+                </Box>
               )}
               sx={{
                 mt: 1,
@@ -214,12 +242,15 @@ const SignIn = () => {
                 },
                 '& .MuiAutocomplete-option': {
                   fontSize: { xs: '0.875rem', sm: '1rem' }
+                },
+                '& .MuiAutocomplete-listbox': {
+                  maxHeight: '200px', // Limit dropdown height
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
                 }
               }}
-              disableClearable
-              autoComplete
-              selectOnFocus
-              freeSolo // This allows typing values not in the list (like 'admin')
+              disableClearable={false} // Allow clearing the field
+              blurOnSelect // Close dropdown when option is selected
+              noOptionsText="No staff member found"
             />
             
             <TextField

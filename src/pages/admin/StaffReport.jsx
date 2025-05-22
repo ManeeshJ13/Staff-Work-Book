@@ -46,6 +46,7 @@ const StaffReport = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up("lg"));
   
   // State for raw data
   const [staffWorkData, setStaffWorkData] = useState([]);
@@ -492,11 +493,11 @@ const StaffReport = () => {
         </Button>
       </Box>
     </Box>
-  );
+  );}
 
   return (
-    <Box sx={{ maxWidth: "100%", overflow: "hidden" }}>
-      <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, maxWidth: "1400px", mx: "auto" }}>
+    <Box sx={{ width: "100%", overflow: "hidden" }}>
+      <Box sx={{ p: { xs: 1, sm: 2, md: 3 }, width: "100%", maxWidth:"100%", mx: "auto", boxSizing:"border-box" }}>
         {/* Header with title and home button */}
         <AppBar position="static" color="default" elevation={0} sx={{ mb: 2 }}>
           <Toolbar sx={{ flexWrap: 'wrap' }}>
@@ -673,31 +674,41 @@ const StaffReport = () => {
             </Button>
           </Box>
         ) : (
+          <Box sx={{
+            width:"100%",
+            overflowX:"auto",
+            "-webkit-overflow-scrolling": "touch",
+            "&::-webkit-scrollbar": {
+              height: "6px"
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: theme.palette.grey[400],
+              borderRadius: "3px"
+            }
+          }}>
           <TableContainer 
             component={Paper} 
             elevation={2} 
             sx={{ 
               width: '100%',
-              overflowX: 'auto',
-              '& .MuiTable-root': {
-                minWidth: isMobile ? 500 : 1000,
-                width: '100%'
-              }
+              maxWidth:"100%",
+              display:"block",
+              tableLayout:"auto" 
             }}
           >
-            <Table size="small" aria-label="staff report table">
+            <Table size="small" aria-label="staff report table" sx={{minWidth:"max-content"}}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "primary.light" }}>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Group</TableCell>}
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>}
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>FY</TableCell>}
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
-                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>}
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white",minWidth:120 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white", minWidth:100 }}>Date</TableCell>
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white",mindiwdth:150 }}>Client</TableCell>}
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white", mindiwdth:120 }}>Group</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white",mindiwdth:150 }}>Assignment</TableCell>
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white",minWidth:200 }}>Work Done</TableCell>}
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white",mindiwdth:80 }}>FY</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white",mindiwdth:80 }}>Hours</TableCell>
+                  {!isMobile && <TableCell sx={{ fontWeight: "bold", color: "white",mindiwdth:80 }}>Done</TableCell>}
+                  <TableCell sx={{ fontWeight: "bold", color: "white",minWidth:100 }}>Cost</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -709,15 +720,15 @@ const StaffReport = () => {
                   >
                     <TableCell>{work.Name || "N/A"}</TableCell>
                     <TableCell>{formatDate(work.Date)}</TableCell>
-                    {!isMobile && <TableCell>{work.Client || "N/A"}</TableCell>}
                     {!isMobile && <TableCell>{getClientGroup(work.Client)}</TableCell>}
+                    {isLargeScreen && <TableCell>{getClientGroup(work.Client)}</TableCell>}
                     <TableCell sx={{ maxWidth: isMobile ? 100 : 'none', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       <Tooltip title={work.Assignment || "N/A"}>
                         <span>{work.Assignment || "N/A"}</span>
                       </Tooltip>
                     </TableCell>
                     {!isMobile && (
-                      <TableCell sx={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         <Tooltip title={work.Work_Done || "N/A"}>
                           <span>{work.Work_Done || "N/A"}</span>
                         </Tooltip>
@@ -756,7 +767,8 @@ const StaffReport = () => {
               </TableFooter>
             </Table>
           </TableContainer>
-        )}
+          </Box>
+        
 
         {/* Filter Drawer for mobile */}
         <Drawer

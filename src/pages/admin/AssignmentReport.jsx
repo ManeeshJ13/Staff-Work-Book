@@ -82,127 +82,101 @@ const AssignmentReport = () => {
   }, [memoizedDateRange]);
 
   // Fetch staff list and work data with optimized data fetching
-  // Replace the useEffect that fetches data with this updated version
-  // Replace the useEffect that fetches data with this completely redesigned version
-useEffect(() => {
-  const fetchData = async () => {
-    if (dateRange.length === 0) return;
-    
-    try {
-      setLoading(true);
-      setError(null); // Clear any previous errors
+  useEffect(() => {
+    const fetchData = async () => {
+      if (dateRange.length === 0) return;
       
-      console.log("Fetching data for date range:", formatQueryDate(startDate), "to", formatQueryDate(endDate));
-      
-      // CRITICAL CHANGE: First get work data for this period to ensure we capture new staff
-      const { data: periodWorkData, error: workError } = await supabase
-        .from("Staff Work")
-        .select("*")
-        .gte("Date", formatQueryDate(startDate))
-        .lte("Date", formatQueryDate(endDate));
-      
-      if (workError) throw workError;
-      console.log("Work data retrieved:", periodWorkData?.length || 0, "records");
-      
-      // Extract ALL unique staff names from this period's work data first
-      // This is crucial to ensure new staff are captured
-      const periodStaffNames = [...new Set(periodWorkData
-        .filter(record => record.Name) // Filter out null names
-        .map(record => record.Name))];
-      
-      console.log("Staff names from current period:", periodStaffNames);
-      
-      // THEN get all historical staff for completeness
-      const { data: allStaffData, error: staffError } = await supabase
-        .from("Staff Work")
-        .select("Name")
-        .order("Name")
-        .not("Name", "is", null);
-      
-      if (staffError) throw staffError;
-      
-      // Combine current period staff with historical staff to ensure we have everyone
-      const allStaffNames = [...new Set([
-        ...periodStaffNames,
-        ...allStaffData.map(item => item.Name)
-      ])];
-      
-      console.log("Combined staff list (should include new staff):", allStaffNames);
-      
-      // Create staff list and summary structure
-      const staffList = allStaffNames.map(name => ({
-        name,
-        workData: {}
-      }));
-      
-      // Initialize summary data structure
-      const summary = {};
-      allStaffNames.forEach(name => {
-        summary[name] = {};
+      try {
+        setLoading(true);
+        setError(null);
         
-        dateRange.forEach(date => {
-          const dateStr = formatQueryDate(date);
-          summary[name][dateStr] = {
-            totalHours: 0,
-            onLeave: false,
-            records: []
-          };
+        const { data: periodWorkData, error: workError } = await supabase
+          .from("Staff Work")
+          .select("*")
+          .gte("Date", formatQueryDate(startDate))
+          .lte("Date", formatQueryDate(endDate));
+        
+        if (workError) throw workError;
+        
+        const periodStaffNames = [...new Set(periodWorkData
+          .filter(record => record.Name)
+          .map(record => record.Name))];
+        
+        const { data: allStaffData, error: staffError } = await supabase
+          .from("Staff Work")
+          .select("Name")
+          .order("Name")
+          .not("Name", "is", null);
+        
+        if (staffError) throw staffError;
+        
+        const allStaffNames = [...new Set([
+          ...periodStaffNames,
+          ...allStaffData.map(item => item.Name)
+        ])];
+        
+        const staffList = allStaffNames.map(name => ({
+          name,
+          workData: {}
+        }));
+        
+        const summary = {};
+        allStaffNames.forEach(name => {
+          summary[name] = {};
+          
+          dateRange.forEach(date => {
+            const dateStr = formatQueryDate(date);
+            summary[name][dateStr] = {
+              totalHours: 0,
+              onLeave: false,
+              records: []
+            };
+          });
         });
-      });
-      
-      // Process work data and populate summary
-      periodWorkData.forEach(record => {
-        const { Name, Date, Hours, Presence } = record;
         
-        // Add safety check to prevent errors
-        if (!Name || !Date || !summary[Name]) {
-          console.warn("Skipping invalid record:", record);
-          return;
-        }
+        periodWorkData.forEach(record => {
+          const { Name, Date, Hours, Presence } = record;
+          
+          if (!Name || !Date || !summary[Name]) {
+            console.warn("Skipping invalid record:", record);
+            return;
+          }
+          
+          if (!summary[Name][Date]) {
+            summary[Name][Date] = {
+              totalHours: 0,
+              onLeave: false,
+              records: []
+            };
+          }
+          
+          summary[Name][Date].records.push(record);
+          
+          if (Presence === false) {
+            summary[Name][Date].onLeave = true;
+          }
+          
+          if (Hours) {
+            summary[Name][Date].totalHours += Hours;
+          }
+        });
         
-        // Initialize this date for this staff member if not already done
-        if (!summary[Name][Date]) {
-          summary[Name][Date] = {
-            totalHours: 0,
-            onLeave: false,
-            records: []
-          };
-        }
-        
-        // Add the record
-        summary[Name][Date].records.push(record);
-        
-        // Update leave status
-        if (Presence === false) {
-          summary[Name][Date].onLeave = true;
-        }
-        
-        // Add hours
-        if (Hours) {
-          summary[Name][Date].totalHours += Hours;
-        }
-      });
-      
-      console.log("Final staff list:", Object.keys(summary));
-      
-      // Update state with the new data
-      setStaffData(staffList);
-      setSummaryData(summary);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError("Failed to load staff work data: " + (err.message || err));
-    } finally {
-      setLoading(false);
-    }
-  };
+        setStaffData(staffList);
+        setSummaryData(summary);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load staff work data: " + (err.message || err));
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchData();
-}, [dateRange, startDate, endDate]); // Added startDate and endDate to dependencies
+    fetchData();
+  }, [dateRange, startDate, endDate]);
 
   const handleStartDateChange = (newDate) => {
     if (newDate) {
       setStartDate(newDate);
-      // If the new start date is after the current end date, adjust the end date
       if (newDate > endDate) {
         setEndDate(addDays(newDate, isMobile ? 2 : isTablet ? 4 : 6));
       }
@@ -211,7 +185,6 @@ useEffect(() => {
 
   const handleEndDateChange = (newDate) => {
     if (newDate) {
-      // If the new end date is before the current start date, adjust the start date
       if (newDate < startDate) {
         setStartDate(newDate);
       }
@@ -219,7 +192,6 @@ useEffect(() => {
     }
   };
 
-  // Quick date navigation handlers
   const handlePreviousPeriod = () => {
     const daysDifference = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
     setStartDate(addDays(startDate, -daysDifference - 1));
@@ -238,7 +210,6 @@ useEffect(() => {
     setEndDate(addDays(today, isMobile ? 2 : isTablet ? 4 : 6));
   };
 
-  // Render cell content and style based on data - memoized
   const renderCell = (staffName, date) => {
     const dateStr = formatQueryDate(date);
     const staffDayData = summaryData[staffName]?.[dateStr];
@@ -279,7 +250,6 @@ useEffect(() => {
     };
   };
 
-  // Mobile view card component for each staff member
   const StaffMobileCard = ({ staffName }) => {
     return (
       <Card sx={{ mb: 2, overflow: 'visible' }}>
@@ -297,7 +267,7 @@ useEffect(() => {
                 <Grid item xs={4} key={idx}>
                   <Box 
                     sx={{ 
-                      p: 1, 
+                      p: 0.5,  // Reduced padding
                       textAlign: 'center',
                       border: isToday ? `1px solid ${theme.palette.primary.main}` : '1px solid #e0e0e0',
                       borderRadius: 1,
@@ -326,18 +296,18 @@ useEffect(() => {
 
   return (
     <Box sx={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
-      <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: '1200px', mx: 'auto' }}>
+      <Box sx={{ p: { xs: 1, sm: 2 }, maxWidth: '1200px', mx: 'auto' }}> {/* Reduced padding */}
         {/* Header with responsive layout */}
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          mb: 3,
+          mb: 2,  // Reduced margin
           flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 2, sm: 0 }
+          gap: { xs: 1, sm: 0 }  // Reduced gap
         }}>
           <Typography 
-            variant={isMobile ? "h5" : "h4"} 
+            variant={isMobile ? "h6" : "h5"}  // Smaller typography
             component="h1" 
             fontWeight="bold"
             sx={{ textAlign: { xs: 'center', sm: 'left' } }}
@@ -350,41 +320,40 @@ useEffect(() => {
             component={Link} 
             to="/admindash"
             startIcon={isMobile ? <HomeIcon /> : null}
-            size={isMobile ? "medium" : "large"}
+            size={isMobile ? "small" : "medium"}  // Smaller button
           >
             {isMobile ? "Home" : "Back to Dashboard"}
           </Button>
         </Box>
 
-        {/* Date Range Selection - more touch-friendly for mobile */}
-        <Paper elevation={2} sx={{ mb: 3, p: { xs: 2, sm: 3 } }}>
+        {/* Date Range Selection - more compact */}
+        <Paper elevation={2} sx={{ mb: 2, p: { xs: 1, sm: 2 } }}>  {/* Reduced padding */}
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2, 
+            gap: 1,  // Reduced gap
             alignItems: { xs: 'stretch', sm: 'center' },
             justifyContent: 'space-between',
-            mb: 2
+            mb: 1  // Reduced margin
           }}>
-            <Typography variant="h6" fontWeight="medium">
+            <Typography variant="subtitle1" fontWeight="medium">  {/* Smaller typography */}
               Select Period
             </Typography>
             
-            {/* Quick navigation buttons */}
-            <Box sx={{ display: 'flex', gap: 1, justifyContent: { xs: 'center', sm: 'flex-end' } }}>
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: { xs: 'center', sm: 'flex-end' } }}>  {/* Reduced gap */}
               <Tooltip title="Previous Period">
-                <IconButton onClick={handlePreviousPeriod} color="primary" size={isMobile ? "small" : "medium"}>
-                  <NavigateBeforeIcon />
+                <IconButton onClick={handlePreviousPeriod} color="primary" size="small">  // Smaller buttons
+                  <NavigateBeforeIcon fontSize="small" />  // Smaller icons
                 </IconButton>
               </Tooltip>
               <Tooltip title="Today">
-                <IconButton onClick={handleToday} color="primary" size={isMobile ? "small" : "medium"}>
-                  <TodayIcon />
+                <IconButton onClick={handleToday} color="primary" size="small">
+                  <TodayIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
               <Tooltip title="Next Period">
-                <IconButton onClick={handleNextPeriod} color="primary" size={isMobile ? "small" : "medium"}>
-                  <NavigateNextIcon />
+                <IconButton onClick={handleNextPeriod} color="primary" size="small">
+                  <NavigateNextIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -394,7 +363,7 @@ useEffect(() => {
             <Box sx={{ 
               display: 'flex', 
               flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2,
+              gap: 1,  // Reduced gap
               width: '100%'
             }}>
               <DatePicker
@@ -402,60 +371,70 @@ useEffect(() => {
                 value={startDate}
                 onChange={handleStartDateChange}
                 sx={{ width: { xs: '100%', sm: '50%' } }}
-                slotProps={{ textField: { fullWidth: true } }}
+                slotProps={{ 
+                  textField: { 
+                    fullWidth: true,
+                    size: 'small'  // Smaller input
+                  } 
+                }}
               />
               <DatePicker
                 label="End Date"
                 value={endDate}
                 onChange={handleEndDateChange}
                 sx={{ width: { xs: '100%', sm: '50%' } }}
-                slotProps={{ textField: { fullWidth: true } }}
+                slotProps={{ 
+                  textField: { 
+                    fullWidth: true,
+                    size: 'small'  // Smaller input
+                  } 
+                }}
               />
             </Box>
           </LocalizationProvider>
           
           {/* Period display */}
           <Box sx={{ 
-            mt: 2, 
-            p: 1.5, 
+            mt: 1,  // Reduced margin
+            p: 1,  // Reduced padding
             bgcolor: 'primary.light', 
             color: 'primary.contrastText',
             borderRadius: 1,
             textAlign: 'center'
           }}>
-            <Typography variant="subtitle1" fontWeight="medium">
+            <Typography variant="body2" fontWeight="medium">  // Smaller typography
               {formatDisplayDate(startDate)} to {formatDisplayDate(endDate)}
             </Typography>
           </Box>
         </Paper>
 
-        {/* Legend */}
+        {/* Legend - made more compact */}
         <Box sx={{ 
-          mb: 3, 
+          mb: 2,  // Reduced margin
           display: 'flex', 
-          gap: 2, 
+          gap: 1,  // Reduced gap
           flexWrap: 'wrap',
           justifyContent: { xs: 'center', sm: 'flex-start' }
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ width: 16, height: 16, backgroundColor: 'rgba(25, 118, 210, 0.15)', border: '1px solid #1976d2' }}></Box>
-            <Typography variant="body2" color="black">Leave</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>  // Reduced gap
+            <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(25, 118, 210, 0.15)', border: '1px solid #1976d2' }}></Box>
+            <Typography variant="caption" color="black">Leave</Typography>  // Smaller text
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ width: 16, height: 16, backgroundColor: 'rgba(255, 235, 59, 0.3)', border: '1px solid #f57c00' }}></Box>
-            <Typography variant="body2" color="black">Less than 5 hours</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{ width: 12, height: 12, backgroundColor: 'rgba(255, 235, 59, 0.3)', border: '1px solid #f57c00' }}></Box>
+            <Typography variant="caption" color="black">Less than 5 hours</Typography>
           </Box>
         </Box>
  
         {loading ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress />
-            <Typography sx={{ mt: 2, color: 'text.secondary' }}>
+          <Box sx={{ textAlign: 'center', py: 2 }}>  // Reduced padding
+            <CircularProgress size={24} />  // Smaller spinner
+            <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>  // Smaller text
               Loading work data...
             </Typography>
           </Box>
         ) : error ? (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>  // Reduced margin
             <AlertTitle>Error</AlertTitle>
             {error}
           </Alert>
@@ -463,17 +442,33 @@ useEffect(() => {
           <>
             {/* Mobile view */}
             {isMobile && (
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ mt: 1 }}>  // Reduced margin
                 {Object.keys(summaryData).sort().map((staffName, index) => (
                   <StaffMobileCard key={index} staffName={staffName} />
                 ))}
               </Box>
             )}
             
-            {/* Desktop view */}
+            {/* Desktop view - made more compact */}
             {!isMobile && (
-              <TableContainer component={Paper} elevation={2} sx={{ overflowX: 'auto' }}>
-                <Table aria-label="staff work hours table" size={isTablet ? "small" : "medium"} stickyHeader>
+              <TableContainer component={Paper} elevation={2} sx={{ 
+                overflowX: 'auto',
+                maxHeight: 'calc(100vh - 300px)',  // Limit height
+                '& .MuiTableCell-root': {
+                  py: 0.5,  // Reduced cell padding
+                  px: 1,    // Reduced cell padding
+                }
+              }}>
+                <Table 
+                  aria-label="staff work hours table" 
+                  size="small"  // Always use small size
+                  stickyHeader
+                  sx={{
+                    '& .MuiTableCell-head': {
+                      py: 1,  // Slightly more padding for headers
+                    }
+                  }}
+                >
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'grey.100' }}>
                       <TableCell 
@@ -483,7 +478,8 @@ useEffect(() => {
                           left: 0,
                           bgcolor: 'grey.100',
                           zIndex: 1,
-                          minWidth: '120px'
+                          minWidth: '120px',
+                          py: 1  // Consistent padding
                         }}
                       >
                         Staff Name
@@ -496,14 +492,16 @@ useEffect(() => {
                             sx={{ 
                               fontWeight: isToday ? 'bold' : 'medium', 
                               textAlign: 'center',
-                              minWidth: '90px',
+                              minWidth: '70px',  // Reduced min width
                               ...(isToday && { 
                                 borderBottom: `2px solid ${theme.palette.primary.main}`,
                                 color: theme.palette.primary.main
                               })
                             }}
                           >
-                            {formatDisplayDate(date)}
+                            <Typography variant="caption" fontWeight="inherit">  // Smaller text
+                              {formatDisplayDate(date)}
+                            </Typography>
                           </TableCell>
                         );
                       })}
@@ -514,7 +512,10 @@ useEffect(() => {
                       <TableRow 
                         key={index}
                         hover
-                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                        sx={{ 
+                          '&:last-child td, &:last-child th': { border: 0 },
+                          height: '40px'  // Fixed row height
+                        }}
                       >
                         <TableCell 
                           sx={{ 
@@ -523,10 +524,13 @@ useEffect(() => {
                             left: 0,
                             bgcolor: 'background.paper',
                             zIndex: 1,
-                            boxShadow: '2px 0px 3px rgba(0,0,0,0.05)'
+                            boxShadow: '2px 0px 3px rgba(0,0,0,0.05)',
+                            py: 1  // Consistent padding
                           }}
                         >
-                          {staffName}
+                          <Typography variant="body2" noWrap>  // Smaller text with no wrap
+                            {staffName}
+                          </Typography>
                         </TableCell>
                         {dateRange.map((date, dateIndex) => {
                           const cellData = renderCell(staffName, date);
@@ -534,9 +538,14 @@ useEffect(() => {
                             <TableCell 
                               key={dateIndex} 
                               align="center"
-                              sx={cellData.style}
+                              sx={{
+                                ...cellData.style,
+                                py: 0.5  // Consistent padding
+                              }}
                             >
-                              {cellData.content}
+                              <Typography variant="body2">  // Smaller text
+                                {cellData.content}
+                              </Typography>
                             </TableCell>
                           );
                         })}
@@ -551,12 +560,12 @@ useEffect(() => {
           <Paper 
             elevation={1} 
             sx={{ 
-              p: { xs: 3, sm: 5 }, 
+              p: { xs: 2, sm: 3 },  // Reduced padding
               textAlign: 'center',
               bgcolor: 'grey.50'
             }}
           >
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="body1" color="text.secondary">  // Smaller text
               No Staff Data Available
             </Typography>
           </Paper>

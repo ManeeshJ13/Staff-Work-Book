@@ -1,22 +1,26 @@
 /* styles.css */
 
 /* Apply a background color to the entire body */
-body {
-  background-color: lightcyan;
-  font-family: Arial, sans-serif;
+html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
   min-height: 100vh;
-  min-width: 100vw;
+  background-color: lightcyan;
+}
+
+body {
+  font-family: Arial, sans-serif;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
-  overflow-x: hidden; 
-  position: relative; 
+  overflow-x: hidden;
+  position: relative;
 }
+
 h1, h2 {
   color: #333;
   padding: 0;

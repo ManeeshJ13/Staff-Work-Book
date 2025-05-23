@@ -534,7 +534,7 @@ const DataEntry = () => {
                         {...params}
                         label="Client"
                         required
-                        fullWidth={isMobile}
+                        fullWidth
                         size={getInputSize()}
                         sx={{
                           width: isMobile ? '100%' : '340px'
@@ -569,7 +569,7 @@ const DataEntry = () => {
                         {...params}
                         label="Assignment"
                         required
-                        fullWidth={isMobile}
+                        fullWidth
                         size={getInputSize()}
                         sx={{
                           width: isMobile ? '100%' : '300px'
@@ -603,6 +603,10 @@ const DataEntry = () => {
                       label="Financial Year"
                       required
                       size={getInputSize()}
+                      sx={{
+                        width:'100%',
+                        textAlign:'left'
+                      }}
                     >
                       {financialYears.map(year => (
                         <MenuItem key={year} value={year}>
@@ -623,6 +627,10 @@ const DataEntry = () => {
                       label="Completion Status"
                       required
                       size={getInputSize()}
+                      sx={{
+                        width:'100%',
+                        textAlign:'left'
+                      }}
                     >
                       <MenuItem value="true">Completed</MenuItem>
                       <MenuItem value="false">In Progress</MenuItem>
@@ -638,9 +646,12 @@ const DataEntry = () => {
                     onChange={(newTime) => handleTimeChange('startTime', newTime)}
                     slotProps={{ 
                       textField: { 
-                        fullWidth: isMobile, 
+                        fullWidth: true, 
                         required: true,
-                        size: getInputSize()
+                        size: getInputSize(),
+                        sx:{
+                          width: isMobile ? "100%" : "auto",
+                        }
                       } 
                     }}
                   />
@@ -653,9 +664,12 @@ const DataEntry = () => {
                     onChange={(newTime) => handleTimeChange('endTime', newTime)}
                     slotProps={{ 
                       textField: { 
-                        fullWidth: isMobile, 
+                        fullWidth: true, 
                         required: true,
-                        size: getInputSize()
+                        size: getInputSize(),
+                        sx:{
+                          width: isMobile ? "100%" : "auto",
+                        }
                       } 
                     }}
                   />
@@ -669,7 +683,7 @@ const DataEntry = () => {
                     value={formData.hours}
                     onChange={handleHoursChange}
                     required
-                    fullWidth={isMobile}
+                    fullWidth
                     sx={{
                       width: isMobile ? '100%' : '120px'
                     }}
@@ -686,7 +700,7 @@ const DataEntry = () => {
                     rows={isMobile ? 2 : 3}
                     value={formData.workDescription}
                     onChange={(e) => setFormData({...formData, workDescription: e.target.value})}
-                    fullWidth={isMobile}
+                    fullWidth
                     required
                     sx={{
                       width: isMobile ? '100%' : '400px'
@@ -702,7 +716,7 @@ const DataEntry = () => {
                     rows={isMobile ? 2 : 3}
                     value={formData.remarks || ''}
                     onChange={(e) => setFormData({...formData, remarks: e.target.value})}
-                    fullWidth={isMobile}
+                    fullWidth
                     variant="outlined"
                     placeholder="Add any additional comments or notes here"
                     sx={{

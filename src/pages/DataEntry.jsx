@@ -47,6 +47,7 @@ const DataEntry = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
+  const [hoursWarning, setHoursWarning] = useState(null); // New state for hours warning
   
   // Lists that will be fetched from Supabase
   const [clientList, setClientList] = useState([]);
@@ -62,8 +63,8 @@ const DataEntry = () => {
     workDescription: '',
     remarks: '',
     financialYear: financialYears[2], // Default to the third entry in the array (2024-25)
-    startTime: new Date(new Date().setHours(9, 0, 0, 0)),
-    endTime: new Date(new Date().setHours(17, 0, 0, 0)),
+    startTime: new Date(new Date().setHours(9, 30, 0, 0)),
+    endTime: new Date(new Date().setHours(17, 30, 0, 0)),
     hours: 8,
     calculatedHours: 8,
     hasUserEditedHours: false,
@@ -125,7 +126,7 @@ const DataEntry = () => {
   const handleAttendanceSubmit = async (e) => {
     e.preventDefault();
 
-          if (!formData.presence) {
+    if (!formData.presence) {
       // If absent, reset all fields except date and presence
       setFormData({
         ...formData,
@@ -153,22 +154,16 @@ const DataEntry = () => {
   const handleDetailSubmit = async (e) => {
     e.preventDefault();
     
-    // Check if entered hours match calculated hours (with 0.5 hour tolerance)
+    // Check if entered hours match calculated hours and show warning if they don't
     const hoursDifference = Math.abs(formData.hours - formData.calculatedHours);
     
-    // If difference is greater than 0.5 hours (except for the exact 0.5 difference which is allowed)
-    if (hoursDifference > 0.5 && hoursDifference !== 0.5) {
-      setError(`Hours entered (${formData.hours}) don't match the calculated hours (${formData.calculatedHours}). 
-                Please correct your entries. Note: A difference of exactly 0.5 hours is acceptable.`);
-      
-      // Refresh the page after 3 seconds
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-      
-      return;
+    if (hoursDifference > 0.1) { // Small tolerance for floating point precision
+      setHoursWarning(`Warning: Hours entered (${formData.hours}) don't match the calculated hours (${formData.calculatedHours}). Please double-check your entries.`);
+    } else {
+      setHoursWarning(null);
     }
     
+    // Always allow submission regardless of hours difference
     const success = await submitData();
     if (success) navigate('/staffdashboard');
   };
@@ -199,15 +194,30 @@ const DataEntry = () => {
     }
     
     setFormData(newData);
+    
+    // Clear warning when times are changed
+    if (field === 'startTime' || field === 'endTime') {
+      setHoursWarning(null);
+    }
   };
 
-  // New handler for when user manually changes hours
+  // Modified handler for when user manually changes hours
   const handleHoursChange = (e) => {
+    const newHours = Number(e.target.value);
+    
     setFormData({
       ...formData,
-      hours: Number(e.target.value),
+      hours: newHours,
       hasUserEditedHours: true // Flag to track if user has manually edited hours
     });
+    
+    // Show warning immediately when hours are manually changed and don't match calculated hours
+    const hoursDifference = Math.abs(newHours - formData.calculatedHours);
+    if (hoursDifference > 0.1) { // Small tolerance for floating point precision
+      setHoursWarning(`Warning: Hours entered (${newHours}) don't match the calculated hours (${formData.calculatedHours}). Please double-check your entries.`);
+    } else {
+      setHoursWarning(null);
+    }
   };
 
   const submitData = async () => {
@@ -408,6 +418,26 @@ const DataEntry = () => {
             </Alert>
           )}
 
+          {/* Hours Warning Popup */}
+          {hoursWarning && (
+            <Alert 
+              severity="warning" 
+              onClose={() => setHoursWarning('')}
+              sx={{ 
+                position: 'fixed',
+                top: 20,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 9999,
+                minWidth: '300px',
+                maxWidth: '90vw',
+                boxShadow: 3
+              }}
+            >
+              {hoursWarning}
+            </Alert>
+          )}
+
           {/* Loading indicator */}
           {loading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: spacing.marginBottom }}>
@@ -490,7 +520,8 @@ const DataEntry = () => {
           {step === 1 && (
             <form onSubmit={handleDetailSubmit}>
               <Grid container spacing={spacing.gridSpacing}>
-                {/* Client selection */}
+                
+                {/* 1st row - Client and Assignment */}
                 <Grid item xs={12}>
                   <Autocomplete
                     options={clientList}
@@ -503,8 +534,11 @@ const DataEntry = () => {
                         {...params}
                         label="Client"
                         required
-                        fullWidth
+                        fullWidth={isMobile}
                         size={getInputSize()}
+                        sx={{
+                          width: isMobile ? '100%' : '340px'
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
@@ -523,7 +557,6 @@ const DataEntry = () => {
                   />
                 </Grid>
 
-                {/* Assignment selection */}
                 <Grid item xs={12}>
                   <Autocomplete
                     options={assignmentList}
@@ -536,8 +569,11 @@ const DataEntry = () => {
                         {...params}
                         label="Assignment"
                         required
-                        fullWidth
+                        fullWidth={isMobile}
                         size={getInputSize()}
+                        sx={{
+                          width: isMobile ? '100%' : '300px'
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
@@ -556,7 +592,7 @@ const DataEntry = () => {
                   />
                 </Grid>
 
-                {/* Financial Year & Completion Status in one row on larger screens */}
+                {/* 2nd row - Financial Year and Completion Status */}
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
                     <InputLabel id="financial-year-label">Financial Year</InputLabel>
@@ -594,7 +630,7 @@ const DataEntry = () => {
                   </FormControl>
                 </Grid>
 
-                {/* Time Tracking - Side by side on larger screens */}
+                {/* 3rd row - Time Tracking */}
                 <Grid item xs={12} sm={6}>
                   <TimePicker
                     label="Start Time"
@@ -602,13 +638,14 @@ const DataEntry = () => {
                     onChange={(newTime) => handleTimeChange('startTime', newTime)}
                     slotProps={{ 
                       textField: { 
-                        fullWidth: true, 
+                        fullWidth: isMobile, 
                         required: true,
                         size: getInputSize()
                       } 
                     }}
                   />
                 </Grid>
+                
                 <Grid item xs={12} sm={6}>
                   <TimePicker
                     label="End Time"
@@ -616,13 +653,14 @@ const DataEntry = () => {
                     onChange={(newTime) => handleTimeChange('endTime', newTime)}
                     slotProps={{ 
                       textField: { 
-                        fullWidth: true, 
+                        fullWidth: isMobile, 
                         required: true,
                         size: getInputSize()
                       } 
                     }}
                   />
                 </Grid>
+                
                 <Grid item xs={12}>
                   <TextField
                     label="Hours Worked"
@@ -631,48 +669,61 @@ const DataEntry = () => {
                     value={formData.hours}
                     onChange={handleHoursChange}
                     required
-                    fullWidth
+                    fullWidth={isMobile}
+                    sx={{
+                      width: isMobile ? '100%' : '120px'
+                    }}
                     size={getInputSize()}
                   />
                 </Grid>
 
-                {/* Work Description */}
-                <Grid item xs={12}>
+                {/* 4th row - Work Description and Remarks */}
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
                   <TextField
                     label="Work Description"
                     multiline
                     rows={isMobile ? 2 : 3}
                     value={formData.workDescription}
                     onChange={(e) => setFormData({...formData, workDescription: e.target.value})}
-                    fullWidth
+                    fullWidth={isMobile}
                     required
+                    sx={{
+                      width: isMobile ? '100%' : '400px'
+                    }}
                     size={getInputSize()}
                   />
                 </Grid>
                 
-                {/* Remarks field */}
-                <Grid item xs={12}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     label="Remarks (Optional)"
                     multiline
                     rows={isMobile ? 2 : 3}
                     value={formData.remarks || ''}
                     onChange={(e) => setFormData({...formData, remarks: e.target.value})}
-                    fullWidth
+                    fullWidth={isMobile}
                     variant="outlined"
                     placeholder="Add any additional comments or notes here"
+                    sx={{
+                      width: isMobile ? '100%' : '400px'
+                    }}
                     size={getInputSize()}
                   />
                 </Grid>
+
+                </Grid>
+                
 
                 {/* Form Actions */}
                 <Grid item xs={12}>
                   <Box sx={{ 
                     display: 'flex', 
                     flexDirection: { xs: 'column', sm: 'row' },
-                    justifyContent: 'space-between', 
-                    mt: 2,
-                    gap: { xs: 2, sm: 2 }
+                    justifyContent: isMobile ? 'center' : 'space-between', 
+                    gap: 2,
+                    mt: 3,
+                    ml: isMobile ? 0 : '300px'
                   }}>
                     <Button
                       variant="outlined"

@@ -159,7 +159,7 @@ const AssignmentReport = () => {
           }
           
           if (Hours) {
-            summary[Name][Date].totalHours += Hours;
+            summary[Name][Date].totalHours = Math.round((summary[Name][Date].totalHours + Hours) * 10) / 10;
           }
         });
         

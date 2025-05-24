@@ -167,12 +167,12 @@ const AddAssignment = () => {
                     {!isMobile && (
                         <Button 
                             component={Link}
-                            to="/admindash"
+                            to="/admin/AssignmentManagement"
                             variant='contained'
                             color='primary'
                             sx={{ visibility: isMobile ? 'hidden' : 'visible' }}
                         >
-                            Home
+                            BACK
                         </Button>
                     )}
                     

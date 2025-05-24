@@ -398,26 +398,26 @@ const DailySummary = () => {
                     hover
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   >
-                    <TableCell sx={{ fontWeight: 'medium' }}>{work.Name || "N/A"}</TableCell>
-                    <TableCell align="center">
+                    <TableCell sx={{ fontWeight: 'medium', maxWidth: 120 }}>{work.Name || "N/A"}</TableCell>
+                    <TableCell align="center" sx={{ width: 100 }}>
                       <StatusChip value={work.Presence} />
                     </TableCell>
-                    <TableCell>{work.Client || "N/A"}</TableCell>
-                    <TableCell>{work.Assignment || "N/A"}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <TableCell sx={{ maxWidth: 120 }}>{work.Client || "N/A"}</TableCell>
+                    <TableCell sx={{ maxWidth: 150 }}>{work.Assignment || "N/A"}</TableCell>
+                    <TableCell sx={{ width: '35%', minWidth: 300, wordWrap: 'break-word', whiteSpace: 'normal' }}>
                       {work.Work_Done || "N/A"}
                     </TableCell>
-                    <TableCell>{work.Financial_Year || "N/A"}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ width: 60 }}>{work.Financial_Year || "N/A"}</TableCell>
+                    <TableCell sx={{ width: 140 }}>
                       {formatTime(work.Start_Time)} - {formatTime(work.End_Time)}
                     </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'medium' }}>
+                    <TableCell align="right" sx={{ fontWeight: 'medium', width: 80 }}>
                       {work.Hours || "N/A"}
                     </TableCell>
-                    <TableCell align="center">
+                    <TableCell align="center" sx={{ width: 100 }}>
                       <StatusChip value={work.Completion} />
                     </TableCell>
-                    <TableCell>{formatTimestamp(work.TimeStamp)}</TableCell>
+                    <TableCell sx={{ width: 140 }}>{formatTimestamp(work.TimeStamp)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

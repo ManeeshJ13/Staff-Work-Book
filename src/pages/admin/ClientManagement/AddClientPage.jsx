@@ -171,12 +171,12 @@ const AddClient = () => {
                     {!isMobile && (
                         <Button 
                             component={Link}
-                            to="/admindash"
+                            to="/admin/ClientManagement"
                             variant='contained'
                             color='primary'
                             sx={{ visibility: isMobile ? 'hidden' : 'visible' }}
                         >
-                            Home
+                            BACK
                         </Button>
                     )}
                     

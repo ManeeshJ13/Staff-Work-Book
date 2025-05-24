@@ -143,19 +143,20 @@ const EditClient = () => {
         <Container maxWidth="md" sx={{ py: 4, px: { xs: 2, sm: 3 } }}>
             <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                    <Typography variant="h5" fontWeight="bold">
-                        EDIT ASSIGNMENT
-                    </Typography>
                     <Button 
                         component={Link}
                         to="/admin/AssignmentManagement"
                         variant="contained"
                         sx={{
-                            ml:'20px'
+                            mr:'20px'
                         }}
                     >
-                        Back
+                        BACK
                     </Button>
+                    <Typography variant="h5" fontWeight="bold">
+                        EDIT ASSIGNMENT
+                    </Typography>
+                    
                 </Box>
 
                 {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}

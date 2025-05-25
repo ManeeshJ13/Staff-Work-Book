@@ -300,6 +300,61 @@ const DataEdit = () => {
       null;
   }, []);
 
+  //deletion of entry
+  const handleDeleteEntry = async (entry) => {
+  setIsSubmitting(true);
+  setError(null);
+  
+  try {
+    console.log('Deleting entry from Supabase:', entry.No);
+
+    // Perform the deletion
+    const { data, error } = await supabase
+      .from('Staff Work')
+      .delete()
+      .eq('No', entry.No); // Using the primary key for deletion
+
+    if (error) {
+      throw error;
+    }
+
+    console.log("Entry deleted successfully");
+    setSuccess("Work entry deleted successfully!");
+    
+    // Update the local state to remove the deleted entry
+    setWorkEntries(workEntries.filter(e => e.id !== entry.id));
+    
+    // Close any open dialogs
+    setEditDialogOpen(false);
+    //setDeleteDialogOpen(false); // If you have a separate delete confirmation dialog
+    
+    // Navigate back to staff dashboard after a short delay to show success message
+    setTimeout(() => {
+      console.error("Error deleting entry:",error);
+      navigate('/staffdashboard');
+    }, 1500); // 1.5 second delay to allow user to see success message
+    
+  }
+  catch (error) {
+    console.error("Error deleting entry:", error);
+    setError(`Failed to delete: ${error.message}`);
+  }
+  finally {
+    setIsSubmitting(false);
+  }
+};
+
+// Optional: Add a confirmation dialog handler
+{/*const handleDeleteConfirmation = () => {
+  // You might want to show a confirmation dialog first
+  if (window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) {
+    handleDeleteEntry();
+  }
+};*/}
+
+
+// Then call handleDeleteEntry() from the confirmation dialog's confirm button
+
   // Handle form submission to update the entry
   const handleUpdateEntry = async () => {
     setIsSubmitting(true);
@@ -958,6 +1013,14 @@ const DataEdit = () => {
                     onClick={() => handleEditClick(entry)}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    startIcon={<DeleteIcon/>}
+                    color="error"
+                    size="small"
+                    onClick={() => handleDeleteEntry(entry)}
+                  >
+                    Delete
                   </Button>
                 </CardActions>
               </Card>

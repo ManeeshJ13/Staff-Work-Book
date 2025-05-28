@@ -29,7 +29,13 @@ import {
   CardContent,
   Drawer,
   AppBar,
-  Toolbar
+  Toolbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  Snackbar
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -37,6 +43,9 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import ClearIcon from "@mui/icons-material/Clear";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import { useTheme } from "@mui/material/styles";
 
 function AdminPage(){
@@ -78,6 +87,30 @@ const StaffReport = () => {
   // Total cost
   const [totalCost, setTotalCost] = useState(0);
   const [totalHours, setTotalHours] = useState(0);
+
+  // Edit and Delete dialog states
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  
+  // Edit form states
+  const [editFormData, setEditFormData] = useState({
+    Name: '',
+    Date: null,
+    Client: '',
+    Assignment: '',
+    Work_Done: '',
+    Financial_Year: '',
+    Hours: '',
+    Presence: true
+  });
+  
+  // Snackbar for success/error messages
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   // Fetch all necessary data on component mount
   useEffect(() => {
@@ -299,6 +332,120 @@ const StaffReport = () => {
     setFilterDrawerOpen(false);
   };
 
+  // Handle edit button click
+  const handleEditClick = (record) => {
+    setSelectedRecord(record);
+    setEditFormData({
+      Name: record.Name || '',
+      Date: record.Date ? new Date(record.Date) : null,
+      Client: record.Client || '',
+      Assignment: record.Assignment || '',
+      Work_Done: record.Work_Done || '',
+      Financial_Year: record.Financial_Year || '',
+      Hours: record.Hours || '',
+      Presence: record.Presence !== false
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = (record) => {
+    setSelectedRecord(record);
+    setDeleteDialogOpen(true);
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async () => {
+    if (!selectedRecord) return;
+
+    // ADD THIS DEBUG LOG
+  console.log('Selected Record:', selectedRecord);
+  console.log('Record ID:', selectedRecord.No);
+  
+  // Check if ID exists
+  if (!selectedRecord.No) {
+    console.error('No ID found for selected record');
+    setSnackbarMessage("Error: Record ID not found. Please refresh and try again.");
+    setSnackbarSeverity("error");
+    setSnackbarOpen(true);
+    return;
+  }
+    
+    try {
+      setUpdating(true);
+      
+      const updateData = {
+        Name: editFormData.Name,
+        Date: editFormData.Date ? editFormData.Date.toISOString().split('T')[0] : null,
+        Client: editFormData.Client,
+        Assignment: editFormData.Assignment,
+        Work_Done: editFormData.Work_Done,
+        Financial_Year: editFormData.Financial_Year,
+        Hours: parseFloat(editFormData.Hours) || null,
+        Presence: editFormData.Presence
+      };
+
+      // ADD THIS DEBUG LOG
+      console.log('Update Data:', updateData);
+      
+      const { error } = await supabase
+        .from("Staff Work")
+        .update(updateData)
+        .eq("No", selectedRecord.No)
+        .select();
+      
+      if (error) throw error;
+      
+      // Refresh data
+      await fetchStaffWorkData();
+      
+      setEditDialogOpen(false);
+      setSnackbarMessage("Record updated successfully!");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+      
+    } catch (err) {
+      console.error("Error updating record:", err);
+      setSnackbarMessage("Failed to update record. Please try again.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    if (!selectedRecord) return;
+    
+    try {
+      setDeleting(true);
+      
+      const { error } = await supabase
+        .from("Staff Work")
+        .delete()
+        .eq("No", selectedRecord.No);
+      
+      if (error) throw error;
+      
+      // Refresh data
+      await fetchStaffWorkData();
+      
+      setDeleteDialogOpen(false);
+      setSnackbarMessage("Record deleted successfully!");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+      
+    } catch (err) {
+      console.error("Error deleting record:", err);
+      setSnackbarMessage("Failed to delete record. Please try again.");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Helper functions
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -324,7 +471,7 @@ const StaffReport = () => {
     // Create CSV content
     const headers = [
       "Name", "Date", "Presence", "Client", "Group", "Assignment", "Work Done", 
-      "Financial Year", "Hours", "Completion", "Total Cost"
+      "Financial Year", "Hours", "Total Cost"
     ];
     
     const csvContent = [
@@ -339,7 +486,6 @@ const StaffReport = () => {
         `"${(row.Work_Done || "N/A").replace(/"/g, '""')}"`, // Escape quotes in text fields
         row.Financial_Year || "N/A",
         row.Hours || "N/A",
-        row.Completion === true ? "Yes" : "No",
         calculateTotalCost(row.Name, row.Hours)
       ].join(","))
     ].join("\n");
@@ -665,13 +811,13 @@ const StaffReport = () => {
           </Button>
         </Box>
       ) : (
-        <Box sx={{ width: '100%', overflowX: 'auto' }}>
+        <Box sx={{ width: '100%', overflowX: 'hidden', ml:'15px' }}>
           <TableContainer 
             component={Paper} 
             elevation={2}
-            sx={{ width: '100%' }}
+            sx={{ width: '100%', overflowX:'hidden' }}
           >
-            <Table size="small" aria-label="staff report table" sx={{ minWidth: 900  }}>
+            <Table size="small" aria-label="staff report table" sx={{ minWidth: 1000  }}>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "primary.light" }}>
                   <TableCell sx={{ fontWeight: "bold", color: "white", width:"150px",minWidth:"150px" }}>Name</TableCell>
@@ -679,17 +825,17 @@ const StaffReport = () => {
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Group</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Work Done</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white",minWidth:'280px' }}>Work Done</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white",width:"80px",minWidth:"80px" }}>Year</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Done</TableCell>
                   <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
+                  <TableCell sx={{ fontWeight: "bold", color: "white", width:"120px",minWidth:"120px" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredData.map((work, index) => (
                   <TableRow 
-                    key={index}
+                    key={work.id || index}
                     hover
                     sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
                   >
@@ -704,27 +850,47 @@ const StaffReport = () => {
                     </TableCell>
                     <TableCell>
                       <Tooltip title={work.Work_Done || "N/A"}>
-                        <span>{work.Work_Done || "N/A"}</span>
+                        <Box sx={{ 
+                          maxWidth: '280px', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'normal',
+                        }}>
+                          {work.Work_Done || "N/A"}
+                        </Box>
                       </Tooltip>
                     </TableCell>
                     <TableCell>{work.Financial_Year || "N/A"}</TableCell>
                     <TableCell>{work.Hours || "N/A"}</TableCell>
-                    <TableCell>
-                      {work.Completion === true ? (
-                        <Chip size="small" label="Yes" color="success" />
-                      ) : work.Completion === false ? (
-                        <Chip size="small" label="No" color="warning" />
-                      ) : (
-                        "N/A"
-                      )}
-                    </TableCell>
                     <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title="Edit Record">
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            onClick={() => handleEditClick(work)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Record">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => handleDeleteClick(work)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow sx={{ backgroundColor: "grey.100" }}>
-                  <TableCell colSpan={8} align="right" sx={{ fontWeight: "bold" }}>
+                  <TableCell colSpan={7} align="right" sx={{ fontWeight: "bold" }}>
                     Totals:
                   </TableCell>
                   <TableCell sx={{ fontWeight: "bold" }}>
@@ -733,12 +899,176 @@ const StaffReport = () => {
                   <TableCell sx={{ fontWeight: "bold" }}>
                     ₹{totalCost.toFixed(2)}
                   </TableCell>
+                  <TableCell></TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
           </TableContainer>
         </Box>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog 
+        open={editDialogOpen} 
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Edit Staff Work Record</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Autocomplete
+                  fullWidth
+                  sx={{
+                    width:'230px'
+                  }}
+                  value={editFormData.Name}
+                  onChange={(event, newValue) => setEditFormData(prev => ({ ...prev, Name: newValue || '' }))}
+                  options={staffList}
+                  renderInput={(params) => <TextField {...params} label="Staff Name" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Autocomplete
+                  fullWidth
+                  sx={{width:'280px'}}
+                  value={editFormData.Client}
+                  onChange={(event, newValue) => setEditFormData(prev => ({ ...prev, Client: newValue || '' }))}
+                  options={clientList}
+                  renderInput={(params) => <TextField {...params} label="Client" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Date"
+                    sx={{width:'150px'}}
+                    value={editFormData.Date}
+                    onChange={(newValue) => setEditFormData(prev => ({ ...prev, Date: newValue }))}
+                    slotProps={{
+                      textField: { fullWidth: true }
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Autocomplete
+                  fullWidth
+                  sx={{width:'230px'}}
+                  value={editFormData.Assignment}
+                  onChange={(event, newValue) => setEditFormData(prev => ({ ...prev, Assignment: newValue || '' }))}
+                  options={assignmentList}
+                  renderInput={(params) => <TextField {...params} label="Assignment" />}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  sx={{width:'70px'}}
+                  type="number"
+                  label="Hours"
+                  value={editFormData.Hours}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, Hours: e.target.value }))}
+                  inputProps={{ step: 0.1, min: 0 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Autocomplete
+                  fullWidth
+                  sx={{width:'150px'}}
+                  value={editFormData.Financial_Year}
+                  onChange={(event, newValue) => setEditFormData(prev => ({ ...prev, Financial_Year: newValue || '' }))}
+                  options={financialYearList}
+                  renderInput={(params) => <TextField {...params} label="Financial Year" />}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  sx={{width:'330px'}}
+                  multiline
+                  rows={3}
+                  label="Work Done"
+                  value={editFormData.Work_Done}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, Work_Done: e.target.value }))}
+                />
+              </Grid>
+              
+              
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setEditDialogOpen(false)}
+            disabled={updating}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditSubmit}
+            variant="contained"
+            disabled={updating}
+          >
+            {updating ? <CircularProgress size={20} /> : 'Update'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Delete Record</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this staff work record? This action cannot be undone.
+          </DialogContentText>
+          {selectedRecord && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="body2"><strong>Staff:</strong> {selectedRecord.Name}</Typography>
+              <Typography variant="body2"><strong>Date:</strong> {formatDate(selectedRecord.Date)}</Typography>
+              <Typography variant="body2"><strong>Client:</strong> {selectedRecord.Client}</Typography>
+              <Typography variant="body2"><strong>Hours:</strong> {selectedRecord.Hours}</Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+          >
+            {deleting ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   </Box>
 );

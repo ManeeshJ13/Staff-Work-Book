@@ -347,11 +347,6 @@ const DailySummary = () => {
                     color="secondary" 
                     variant="filled" 
                   />
-                  <Chip 
-                    label={`Avg: ${hoursSummary.average} hrs`} 
-                    color="secondary" 
-                    variant="outlined" 
-                  />
                 </Box>
               </Grid>
             )}
@@ -375,8 +370,8 @@ const DailySummary = () => {
         isMobile ? (
           renderMobileCards()
         ) : (
-          <TableContainer component={Paper} elevation={2}>
-            <Table aria-label="staff work table" size="small" sx={{ minWidth: 650 }}>
+          <TableContainer component={Paper} elevation={2} sx={{ width: '102%', overflowX: 'auto', }}>
+            <Table aria-label="staff work table" size="small" sx={{ minWidth: 650}}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.100' }}>
                   <TableCell>Name</TableCell>
@@ -398,13 +393,13 @@ const DailySummary = () => {
                     hover
                     sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   >
-                    <TableCell sx={{ fontWeight: 'medium', maxWidth: 120 }}>{work.Name || "N/A"}</TableCell>
+                    <TableCell sx={{ fontWeight: 'medium', maxWidth: 150}}>{work.Name || "N/A"}</TableCell>
                     <TableCell align="center" sx={{ width: 100 }}>
                       <StatusChip value={work.Presence} />
                     </TableCell>
                     <TableCell sx={{ maxWidth: 120 }}>{work.Client || "N/A"}</TableCell>
                     <TableCell sx={{ maxWidth: 150 }}>{work.Assignment || "N/A"}</TableCell>
-                    <TableCell sx={{ width: '35%', minWidth: 300, wordWrap: 'break-word', whiteSpace: 'normal' }}>
+                    <TableCell sx={{ width: '30%', minWidth: 300, wordWrap: 'break-word', whiteSpace: 'normal' }}>
                       {work.Work_Done || "N/A"}
                     </TableCell>
                     <TableCell sx={{ width: 60 }}>{work.Financial_Year || "N/A"}</TableCell>
@@ -417,7 +412,7 @@ const DailySummary = () => {
                     <TableCell align="center" sx={{ width: 100 }}>
                       <StatusChip value={work.Completion} />
                     </TableCell>
-                    <TableCell sx={{ width: 140 }}>{formatTimestamp(work.TimeStamp)}</TableCell>
+                    <TableCell sx={{ width: 140}}>{formatTimestamp(work.TimeStamp)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -77,16 +77,30 @@ const AssignmentReport = () => {
     return dates;
   }, [startDate, endDate]);
 
-  // Update dateRange when memoizedDateRange changes
+  // Filter dates to only include those with work data
+  const filteredDateRange = useMemo(() => {
+    if (!summaryData || Object.keys(summaryData).length === 0) {
+      return memoizedDateRange;
+    }
+
+    return memoizedDateRange.filter(date => {
+      const dateStr = formatQueryDate(date);
+      // Check if any staff member has work data for this date
+      return Object.values(summaryData).some(staffData => {
+        const dayData = staffData[dateStr];
+        return dayData && (dayData.totalHours > 0 || dayData.onLeave || dayData.records.length > 0);
+      });
+    });
+  }, [memoizedDateRange, summaryData]);
+
+  // Update dateRange when filteredDateRange changes
   useEffect(() => {
-    setDateRange(memoizedDateRange);
-  }, [memoizedDateRange]);
+    setDateRange(filteredDateRange);
+  }, [filteredDateRange]);
 
   // Fetch staff list and work data with optimized data fetching
   useEffect(() => {
     const fetchData = async () => {
-      if (dateRange.length === 0) return;
-      
       try {
         setLoading(true);
         setError(null);
@@ -126,7 +140,8 @@ const AssignmentReport = () => {
         allStaffNames.forEach(name => {
           summary[name] = {};
           
-          dateRange.forEach(date => {
+          // Initialize all dates in the potential range
+          memoizedDateRange.forEach(date => {
             const dateStr = formatQueryDate(date);
             summary[name][dateStr] = {
               totalHours: 0,
@@ -174,7 +189,7 @@ const AssignmentReport = () => {
     };
 
     fetchData();
-  }, [dateRange, startDate, endDate]);
+  }, [startDate, endDate, memoizedDateRange]);
 
   const handleStartDateChange = (newDate) => {
     if (newDate) {
@@ -404,6 +419,11 @@ const AssignmentReport = () => {
           }}>
             <Typography variant="body2" fontWeight="medium">
               {formatDisplayDate(endDate)} to {formatDisplayDate(startDate)}
+              {dateRange.length < memoizedDateRange.length && (
+                <Typography variant="caption" display="block" sx={{ opacity: 0.8 }}>
+                  Showing only days with work data ({dateRange.length} of {memoizedDateRange.length} days)
+                </Typography>
+              )}
             </Typography>
           </Box>
         </Paper>
@@ -440,118 +460,135 @@ const AssignmentReport = () => {
           </Alert>
         ) : staffData.length > 0 ? (
           <>
-            {/* Mobile view */}
-            {isMobile && (
-              <Box sx={{ mt: 1 }}>
-                {Object.keys(summaryData).sort().map((staffName, index) => (
-                  <StaffMobileCard key={index} staffName={staffName} />
-                ))}
-              </Box>
-            )}
-            
-            {/* Desktop view - removed scrollable container */}
-            {!isMobile && (
-              <TableContainer component={Paper} elevation={2} sx={{ 
-                overflowX: 'auto',
-                '& .MuiTableCell-root': {
-                  py: 0.5,
-                  px: 1,
-                }
-              }}>
-                <Table 
-                  aria-label="staff work hours table" 
-                  size="small"
-                  sx={{
-                    '& .MuiTableCell-head': {
-                      py: 1,
+            {dateRange.length === 0 ? (
+              <Paper 
+                elevation={1} 
+                sx={{ 
+                  p: { xs: 2, sm: 3 },
+                  textAlign: 'center',
+                  bgcolor: 'grey.50'
+                }}
+              >
+                <Typography variant="body1" color="text.secondary">
+                  No work data found for the selected period
+                </Typography>
+              </Paper>
+            ) : (
+              <>
+                {/* Mobile view */}
+                {isMobile && (
+                  <Box sx={{ mt: 1 }}>
+                    {Object.keys(summaryData).sort().map((staffName, index) => (
+                      <StaffMobileCard key={index} staffName={staffName} />
+                    ))}
+                  </Box>
+                )}
+                
+                {/* Desktop view - removed scrollable container */}
+                {!isMobile && (
+                  <TableContainer component={Paper} elevation={2} sx={{ 
+                    overflowX: 'auto',
+                    '& .MuiTableCell-root': {
+                      py: 0.5,
+                      px: 1,
                     }
-                  }}
-                >
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: 'grey.100' }}>
-                      <TableCell 
-                        sx={{ 
-                          fontWeight: 'bold',
-                          position: 'sticky',
-                          left: 0,
-                          bgcolor: 'grey.100',
-                          zIndex: 1,
-                          minWidth: '120px',
-                          py: 1
-                        }}
-                      >
-                        Staff Name
-                      </TableCell>
-                      {dateRange.map((date, index) => {
-                        const isToday = isSameDay(date, new Date());
-                        return (
+                  }}>
+                    <Table 
+                      aria-label="staff work hours table" 
+                      size="small"
+                      sx={{
+                        '& .MuiTableCell-head': {
+                          py: 1,
+                        }
+                      }}
+                    >
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: 'grey.100' }}>
                           <TableCell 
-                            key={index} 
                             sx={{ 
-                              fontWeight: isToday ? 'bold' : 'medium', 
-                              textAlign: 'center',
-                              minWidth: '70px',
-                              ...(isToday && { 
-                                borderBottom: `2px solid ${theme.palette.primary.main}`,
-                                color: theme.palette.primary.main
-                              })
+                              fontWeight: 'bold',
+                              position: 'sticky',
+                              left: 0,
+                              bgcolor: 'grey.100',
+                              zIndex: 1,
+                              minWidth: '120px',
+                              py: 1
                             }}
                           >
-                            <Typography variant="caption" fontWeight="inherit">
-                              {formatDisplayDate(date)}
-                            </Typography>
+                            Staff Name
                           </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {Object.keys(summaryData).sort().map((staffName, index) => (
-                      <TableRow 
-                        key={index}
-                        hover
-                        sx={{ 
-                          '&:last-child td, &:last-child th': { border: 0 },
-                          height: '40px'
-                        }}
-                      >
-                        <TableCell 
-                          sx={{ 
-                            fontWeight: 'medium',
-                            position: 'sticky',
-                            left: 0,
-                            bgcolor: 'background.paper',
-                            zIndex: 1,
-                            boxShadow: '2px 0px 3px rgba(0,0,0,0.05)',
-                            py: 1
-                          }}
-                        >
-                          <Typography variant="body2" noWrap>
-                            {staffName}
-                          </Typography>
-                        </TableCell>
-                        {dateRange.map((date, dateIndex) => {
-                          const cellData = renderCell(staffName, date);
-                          return (
+                          {dateRange.map((date, index) => {
+                            const isToday = isSameDay(date, new Date());
+                            return (
+                              <TableCell 
+                                key={index} 
+                                sx={{ 
+                                  fontWeight: isToday ? 'bold' : 'medium', 
+                                  textAlign: 'center',
+                                  minWidth: '70px',
+                                  ...(isToday && { 
+                                    borderBottom: `2px solid ${theme.palette.primary.main}`,
+                                    color: theme.palette.primary.main
+                                  })
+                                }}
+                              >
+                                <Typography variant="caption" fontWeight="inherit">
+                                  {formatDisplayDate(date)}
+                                </Typography>
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {Object.keys(summaryData).sort().map((staffName, index) => (
+                          <TableRow 
+                            key={index}
+                            hover
+                            sx={{ 
+                              '&:last-child td, &:last-child th': { border: 0 },
+                              height: '40px'
+                            }}
+                          >
                             <TableCell 
-                              key={dateIndex} 
-                              align="center"
-                              sx={{
-                                ...cellData.style,
-                                py: 0.5
+                              sx={{ 
+                                fontWeight: 'medium',
+                                position: 'sticky',
+                                left: 0,
+                                bgcolor: 'background.paper',
+                                zIndex: 1,
+                                boxShadow: '2px 0px 3px rgba(0,0,0,0.05)',
+                                py: 1
                               }}
                             >
-                              <Typography variant="body2">
-                                {cellData.content}
+                              <Typography variant="body2" noWrap>
+                                {staffName}
                               </Typography>
                             </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                            {dateRange.map((date, dateIndex) => {
+                              const cellData = renderCell(staffName, date);
+                              return (
+                                <TableCell 
+                                  key={dateIndex} 
+                                  align="center"
+                                  sx={{
+                                    ...cellData.style,
+                                    py: 0.5
+                                  }}
+                                >
+                                  <Typography variant="body2">
+                                    {cellData.content}
+                                  </Typography>
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </>
             )}
           </>
         ) : (

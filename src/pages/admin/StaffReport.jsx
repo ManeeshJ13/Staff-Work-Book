@@ -811,100 +811,118 @@ const StaffReport = () => {
           </Button>
         </Box>
       ) : (
-        <Box sx={{ width: '100%', overflowX: 'hidden', ml:'15px' }}>
-          <TableContainer 
-            component={Paper} 
-            elevation={2}
-            sx={{ width: '100%', overflowX:'hidden' }}
+        <Box sx={{ width: '100%', overflowX: 'hidden', ml: 1 }}>
+  <TableContainer 
+    component={Paper} 
+    elevation={2}
+    sx={{ width: '100%', overflowX: 'auto' }}
+  >
+    <Table size="small" aria-label="staff report table">
+      <TableHead>
+        <TableRow sx={{ backgroundColor: "primary.light" }}>
+          {[
+            { label: "Name" },
+            { label: "Date" },
+            { label: "Client" },
+            { label: "Group" },
+            { label: "Assignment" },
+            { label: "Work Done" },
+            { label: "Year" },
+            { label: "Hours" },
+            { label: "Cost" },
+            { label: "Actions" }
+          ].map((col, idx) => (
+            <TableCell
+              key={idx}
+              sx={{
+                fontWeight: "bold",
+                color: "white",
+                whiteSpace: col === "Work Done" ? 'normal' : 'nowrap',
+                padding: '6px',
+              }}
+            >
+              {col.label}
+            </TableCell>
+          ))}
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {filteredData.map((work, index) => (
+          <TableRow 
+            key={work.id || index}
+            hover
+            sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
           >
-            <Table size="small" aria-label="staff report table" sx={{ minWidth: 1000  }}>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "primary.light" }}>
-                  <TableCell sx={{ fontWeight: "bold", color: "white", width:"150px",minWidth:"150px" }}>Name</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Client</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Group</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Assignment</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white",minWidth:'280px' }}>Work Done</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white",width:"80px",minWidth:"80px" }}>Year</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Hours</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white" }}>Cost</TableCell>
-                  <TableCell sx={{ fontWeight: "bold", color: "white", width:"120px",minWidth:"120px" }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredData.map((work, index) => (
-                  <TableRow 
-                    key={work.id || index}
-                    hover
-                    sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
+            <TableCell sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {work.Name || "N/A"}
+            </TableCell>
+            <TableCell>{formatDate(work.Date)}</TableCell>
+            <TableCell>{work.Client || "N/A"}</TableCell>
+            <TableCell>{getClientGroup(work.Client)}</TableCell>
+            <TableCell>
+              <Tooltip title={work.Assignment || "N/A"}>
+                <Box sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {work.Assignment || "N/A"}
+                </Box>
+              </Tooltip>
+            </TableCell>
+            <TableCell>
+              <Tooltip title={work.Work_Done || "N/A"}>
+                <Box sx={{ 
+                  whiteSpace: 'normal', 
+                  wordBreak: 'break-word',
+                  maxWidth: '300px'
+                }}>
+                  {work.Work_Done || "N/A"}
+                </Box>
+              </Tooltip>
+            </TableCell>
+            <TableCell>{work.Financial_Year || "N/A"}</TableCell>
+            <TableCell>{work.Hours || "N/A"}</TableCell>
+            <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
+            <TableCell>
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                <Tooltip title="Edit Record">
+                  <IconButton 
+                    size="small" 
+                    color="primary"
+                    onClick={() => handleEditClick(work)}
                   >
-                    <TableCell>{work.Name || "N/A"}</TableCell>
-                    <TableCell>{formatDate(work.Date)}</TableCell>
-                    <TableCell>{work.Client || "N/A"}</TableCell>
-                    <TableCell>{getClientGroup(work.Client)}</TableCell>
-                    <TableCell>
-                      <Tooltip title={work.Assignment || "N/A"}>
-                        <span>{work.Assignment || "N/A"}</span>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={work.Work_Done || "N/A"}>
-                        <Box sx={{ 
-                          maxWidth: '280px', 
-                          overflow: 'hidden', 
-                          textOverflow: 'ellipsis', 
-                          whiteSpace: 'normal',
-                        }}>
-                          {work.Work_Done || "N/A"}
-                        </Box>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{work.Financial_Year || "N/A"}</TableCell>
-                    <TableCell>{work.Hours || "N/A"}</TableCell>
-                    <TableCell>₹{calculateTotalCost(work.Name, work.Hours)}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Tooltip title="Edit Record">
-                          <IconButton 
-                            size="small" 
-                            color="primary"
-                            onClick={() => handleEditClick(work)}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete Record">
-                          <IconButton 
-                            size="small" 
-                            color="error"
-                            onClick={() => handleDeleteClick(work)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow sx={{ backgroundColor: "grey.100" }}>
-                  <TableCell colSpan={7} align="right" sx={{ fontWeight: "bold" }}>
-                    Totals:
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    {totalHours.toFixed(2)}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: "bold" }}>
-                    ₹{totalCost.toFixed(2)}
-                  </TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          </TableContainer>
-        </Box>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete Record">
+                  <IconButton 
+                    size="small" 
+                    color="error"
+                    onClick={() => handleDeleteClick(work)}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+      <TableFooter>
+        <TableRow sx={{ backgroundColor: "grey.100" }}>
+          <TableCell colSpan={7} align="right" sx={{ fontWeight: "bold" }}>
+            Totals:
+          </TableCell>
+          <TableCell sx={{ fontWeight: "bold" }}>
+            {totalHours.toFixed(2)}
+          </TableCell>
+          <TableCell sx={{ fontWeight: "bold" }}>
+            ₹{totalCost.toFixed(2)}
+          </TableCell>
+          <TableCell></TableCell>
+        </TableRow>
+      </TableFooter>
+    </Table>
+  </TableContainer>
+</Box>
+
       )}
 
       {/* Edit Dialog */}

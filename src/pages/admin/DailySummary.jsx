@@ -26,12 +26,20 @@ import {
   Card,
   CardContent,
   Chip,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Tooltip,
+  Snackbar
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const DailySummary = () => {
   const [staffWorkData, setStaffWorkData] = useState([]);
@@ -39,6 +47,12 @@ const DailySummary = () => {
   const [dateList, setDateList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -125,6 +139,60 @@ const DailySummary = () => {
     setSelectedDate(newValue);
   };
 
+  const handleDeleteClick = (record) => {
+    setRecordToDelete(record);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!recordToDelete || !recordToDelete.No) {
+      setSnackbarMessage("Cannot delete record: Missing record ID");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+      setDeleteDialogOpen(false);
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      
+      const { error } = await supabase
+        .from("Staff Work")
+        .delete()
+        .eq("No", recordToDelete.No);
+
+      if (error) throw error;
+
+      // Remove the deleted record from the local state
+      setStaffWorkData(prevData => 
+        prevData.filter(record => record.id !== recordToDelete.id)
+      );
+
+      setSnackbarMessage("Record deleted successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+      
+    } catch (err) {
+      console.error("Error deleting record:", err);
+      setSnackbarMessage("Failed to delete record");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setRecordToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setRecordToDelete(null);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
   const formatTime = (time) => {
     if (!time) return "N/A";
     return new Date(`1970-01-01T${time}`).toLocaleTimeString([], {
@@ -191,9 +259,20 @@ const DailySummary = () => {
       {staffWorkData.map((work, index) => (
         <Card key={index} sx={{ mb: 2, boxShadow: 1 }}>
           <CardContent>
-            <Typography variant="h6" component="div" gutterBottom>
-              {work.Name || "N/A"}
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+              <Typography variant="h6" component="div">
+                {work.Name || "N/A"}
+              </Typography>
+              <Tooltip title="Delete Record">
+                <IconButton 
+                  size="small" 
+                  color="error"
+                  onClick={() => handleDeleteClick(work)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">
@@ -370,8 +449,8 @@ const DailySummary = () => {
         isMobile ? (
           renderMobileCards()
         ) : (
-          <TableContainer component={Paper} elevation={2} sx={{ width: '102%', overflowX: 'auto', }}>
-            <Table aria-label="staff work table" size="small" sx={{ minWidth: 650}}>
+          <TableContainer component={Paper} elevation={2} sx={{ width: '102%', overflowX: '-moz-hidden-unscrollable', }}>
+            <Table aria-label="staff work table" size="small" sx={{ minWidth: 850}}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.100' }}>
                   <TableCell>Name</TableCell>
@@ -384,6 +463,7 @@ const DailySummary = () => {
                   <TableCell align="right">Hours</TableCell>
                   <TableCell align="center">Completion</TableCell>
                   <TableCell>TimeStamp</TableCell>
+                  <TableCell>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -399,7 +479,7 @@ const DailySummary = () => {
                     </TableCell>
                     <TableCell sx={{ maxWidth: 120 }}>{work.Client || "N/A"}</TableCell>
                     <TableCell sx={{ maxWidth: 150 }}>{work.Assignment || "N/A"}</TableCell>
-                    <TableCell sx={{ width: '30%', minWidth: 300, wordWrap: 'break-word', whiteSpace: 'normal' }}>
+                    <TableCell sx={{ width: '30%', minWidth: 200, wordWrap: 'break-word', whiteSpace: 'normal' }}>
                       {work.Work_Done || "N/A"}
                     </TableCell>
                     <TableCell sx={{ width: 60 }}>{work.Financial_Year || "N/A"}</TableCell>
@@ -413,6 +493,17 @@ const DailySummary = () => {
                       <StatusChip value={work.Completion} />
                     </TableCell>
                     <TableCell sx={{ width: 140}}>{formatTimestamp(work.TimeStamp)}</TableCell>
+                    <TableCell>
+                       <Tooltip title="Delete Record">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => handleDeleteClick(work)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -433,6 +524,55 @@ const DailySummary = () => {
           </Typography>
         </Paper>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete the work record for{' '}
+            <strong>{recordToDelete?.Name || 'this staff member'}</strong>?
+            <br />
+            This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="primary">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={deleting}
+          >
+            {deleting ? <CircularProgress size={20} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleSnackbarClose} 
+          severity={snackbarSeverity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -385,9 +385,6 @@ const StaffReport = () => {
         Presence: editFormData.Presence
       };
 
-      // ADD THIS DEBUG LOG
-      console.log('Update Data:', updateData);
-      
       const { error } = await supabase
         .from("Staff Work")
         .update(updateData)
@@ -414,37 +411,6 @@ const StaffReport = () => {
     }
   };
 
-  // Handle delete confirmation
-  const handleDeleteConfirm = async () => {
-    if (!selectedRecord) return;
-    
-    try {
-      setDeleting(true);
-      
-      const { error } = await supabase
-        .from("Staff Work")
-        .delete()
-        .eq("No", selectedRecord.No);
-      
-      if (error) throw error;
-      
-      // Refresh data
-      await fetchStaffWorkData();
-      
-      setDeleteDialogOpen(false);
-      setSnackbarMessage("Record deleted successfully!");
-      setSnackbarSeverity("success");
-      setSnackbarOpen(true);
-      
-    } catch (err) {
-      console.error("Error deleting record:", err);
-      setSnackbarMessage("Failed to delete record. Please try again.");
-      setSnackbarSeverity("error");
-      setSnackbarOpen(true);
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   // Helper functions
   const formatDate = (date) => {
@@ -859,14 +825,14 @@ const StaffReport = () => {
             <TableCell>{formatDate(work.Date)}</TableCell>
             <TableCell>{work.Client || "N/A"}</TableCell>
             <TableCell>{getClientGroup(work.Client)}</TableCell>
-            <TableCell>
+            <TableCell sx={{maxWidth:'150px', whiteSpace:'normal', wordBreak:'break-word' }}>
               <Tooltip title={work.Assignment || "N/A"}>
-                <Box sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <Box sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {work.Assignment || "N/A"}
                 </Box>
               </Tooltip>
             </TableCell>
-            <TableCell>
+            <TableCell sx={{minWidth:'250px',maxWidth:'100%',whiteSpace:'normal',wordBreak:'break-word'}}>
               <Tooltip title={work.Work_Done || "N/A"}>
                 <Box sx={{ 
                   whiteSpace: 'normal', 
@@ -889,15 +855,6 @@ const StaffReport = () => {
                     onClick={() => handleEditClick(work)}
                   >
                     <EditIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Delete Record">
-                  <IconButton 
-                    size="small" 
-                    color="error"
-                    onClick={() => handleDeleteClick(work)}
-                  >
-                    <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               </Box>
@@ -1032,43 +989,6 @@ const StaffReport = () => {
             disabled={updating}
           >
             {updating ? <CircularProgress size={20} /> : 'Update'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Delete Record</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this staff work record? This action cannot be undone.
-          </DialogContentText>
-          {selectedRecord && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-              <Typography variant="body2"><strong>Staff:</strong> {selectedRecord.Name}</Typography>
-              <Typography variant="body2"><strong>Date:</strong> {formatDate(selectedRecord.Date)}</Typography>
-              <Typography variant="body2"><strong>Client:</strong> {selectedRecord.Client}</Typography>
-              <Typography variant="body2"><strong>Hours:</strong> {selectedRecord.Hours}</Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setDeleteDialogOpen(false)}
-            disabled={deleting}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteConfirm}
-            color="error"
-            variant="contained"
-            disabled={deleting}
-          >
-            {deleting ? <CircularProgress size={20} /> : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

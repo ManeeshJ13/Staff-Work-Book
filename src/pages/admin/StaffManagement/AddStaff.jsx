@@ -36,7 +36,7 @@ const AddStaff = () => {
     
     // Handle back button
     const handleBack = () => {
-        navigate('/admindash');
+        navigate('/admin/StaffManagement');
     };
     
     // Reset the form 
@@ -120,7 +120,7 @@ const AddStaff = () => {
     resetForm();
     
     // Redirect after 1.5 seconds
-    setTimeout(() => navigate('/admindash'), 1500);
+    setTimeout(() => navigate('/admin/StaffManagement'), 1500);
 } catch (err) {
     console.error('Error adding staff:', err);
     setError(err.message);

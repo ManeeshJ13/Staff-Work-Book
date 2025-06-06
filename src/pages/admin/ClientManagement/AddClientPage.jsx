@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabaseClient';
 import withAuth from '../../../components/withAuth';
@@ -13,7 +13,8 @@ import {
     TextField,
     Button,
     Alert,
-    CircularProgress
+    CircularProgress,
+    Autocomplete
 } from "@mui/material"
 
 function AdminPage(){
@@ -30,6 +31,10 @@ const AddClient = () => {
     const [clientName, setClientName] = useState('');
     const [clientGroup, setClientGroup] = useState('');
     
+    // State for group options
+    const [groupOptions, setGroupOptions] = useState([]);
+    const [loadingGroups, setLoadingGroups] = useState(true);
+    
     // State for form handling
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
@@ -37,9 +42,43 @@ const AddClient = () => {
     const [debugInfo, setDebugInfo] = useState('');
     const [showDebug, setShowDebug] = useState(false);
     
+    // Fetch existing groups on component mount
+    useEffect(() => {
+        fetchGroups();
+    }, []);
+    
+    const fetchGroups = async () => {
+        try {
+            setLoadingGroups(true);
+            const { data: clients, error } = await supabase
+                .from('Clients List')
+                .select('Group')
+                .not('Group', 'is', null)
+                .not('Group', 'eq', '');
+            
+            if (error) {
+                console.error('Error fetching groups:', error);
+                return;
+            }
+            
+            // Extract unique group names and filter out empty strings
+            const uniqueGroups = [...new Set(
+                clients
+                    .map(client => client.Group?.trim())
+                    .filter(group => group && group.length > 0)
+            )].sort();
+            
+            setGroupOptions(uniqueGroups);
+        } catch (err) {
+            console.error('Error in fetchGroups:', err);
+        } finally {
+            setLoadingGroups(false);
+        }
+    };
+    
     // Handle back button
     const handleBack = () => {
-        navigate('/admindash');
+        navigate('/admin/ClientManagement');
     };
     
     // Reset the form 
@@ -114,12 +153,18 @@ const AddClient = () => {
             
             console.log('Successfully inserted client:', insertedClient);
 
+            // If a new group was added, refresh the group options for future use
+            const trimmedGroup = clientGroup.trim();
+            if (trimmedGroup && !groupOptions.includes(trimmedGroup)) {
+                setGroupOptions(prev => [...prev, trimmedGroup].sort());
+            }
+
             // Success state
             setSuccess(true);
             resetForm();
             
             // Redirect after 1.5 seconds
-            setTimeout(() => navigate('/admindash'), 1500);
+            setTimeout(() => navigate('/admin/ClientManagement'), 1500);
         } catch (err) {
             console.error('Error adding client:', err);
             setError(err.message);
@@ -274,7 +319,7 @@ const AddClient = () => {
                         />
                     </Box>
 
-                    {/* Client Group Field */}
+                    {/* Client Group Field - Now with Autocomplete */}
                     <Box sx={{ mb: { xs: 2, md: 3 } }}>
                         <Typography
                             variant="subtitle1"
@@ -287,27 +332,57 @@ const AddClient = () => {
                         >
                             Group
                         </Typography>
-                        <TextField
+                        <Autocomplete
                             id="clientGroup"
-                            placeholder="Enter client group"
-                            variant="outlined"
-                            fullWidth
+                            freeSolo
+                            options={groupOptions}
                             value={clientGroup}
-                            onChange={(e) => setClientGroup(e.target.value)}
-                            disabled={isSubmitting}
-                            size={isMobile ? "small" : "medium"}
-                            InputProps={{
-                                sx: {
-                                    fontSize: { xs: '0.95rem', md: '1rem' },
-                                    borderRadius: { xs: 1, md: 1.5 }
-                                }
+                            onChange={(event, newValue) => {
+                                setClientGroup(newValue || '');
                             }}
+                            onInputChange={(event, newInputValue) => {
+                                setClientGroup(newInputValue);
+                            }}
+                            disabled={isSubmitting}
+                            loading={loadingGroups}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    placeholder="Select or enter group name"
+                                    variant="outlined"
+                                    fullWidth
+                                    size={isMobile ? "small" : "medium"}
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <>
+                                                {loadingGroups ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </>
+                                        ),
+                                        sx: {
+                                            fontSize: { xs: '0.95rem', md: '1rem' },
+                                            borderRadius: { xs: 1, md: 1.5 }
+                                        }
+                                    }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            '&:hover fieldset': {
+                                                borderColor: theme.palette.primary.main,
+                                            },
+                                        },
+                                    }}
+                                />
+                            )}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props}>
+                                    {option}
+                                </Box>
+                            )}
                             sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    '&:hover fieldset': {
-                                        borderColor: theme.palette.primary.main,
-                                    },
-                                },
+                                '& .MuiAutocomplete-option': {
+                                    fontSize: { xs: '0.95rem', md: '1rem' }
+                                }
                             }}
                         />
                     </Box>

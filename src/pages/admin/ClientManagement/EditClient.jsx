@@ -154,7 +154,7 @@ const EditClient = () => {
             setSuccess(true);
             
             // Redirect after 1.5 seconds
-            setTimeout(() => navigate('/admindash'), 1500);
+            setTimeout(() => navigate('/admin/ClientManagement'), 1500);
         } catch (err) {
             console.error('Error updating client:', err);
             setError(err.message);
@@ -165,7 +165,7 @@ const EditClient = () => {
 
     // Handle back button
     const handleBack = () => {
-        navigate('/admindash');
+        navigate('/admin/ClientManagement');
     };
 
     return (

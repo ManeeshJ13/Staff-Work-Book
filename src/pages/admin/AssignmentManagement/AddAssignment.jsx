@@ -37,7 +37,7 @@ const AddAssignment = () => {
     
     // Handle back button
     const handleBack = () => {
-        navigate('/admindash');
+        navigate('/admin/AssignmentManagement');
     };
     
     // Reset the form 
@@ -115,7 +115,7 @@ const AddAssignment = () => {
             resetForm();
             
             // Redirect after 1.5 seconds
-            setTimeout(() => navigate('/admindash'), 1500);
+            setTimeout(() => navigate('/admin/AssignmentManagement'), 1500);
         } catch (err) {
             console.error('Error adding assignment:', err);
             setError(err.message);

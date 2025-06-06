@@ -69,7 +69,7 @@ const DeleteClient = () => {
     
     // Handle back button
     const handleBack = () => {
-        navigate('/admindash');
+        navigate('/admin/ClientManagement');
     };
     
     // Open confirmation dialog
@@ -116,7 +116,7 @@ const DeleteClient = () => {
             setOpenConfirmDialog(false);
             
             // Redirect after 1.5 seconds
-            setTimeout(() => navigate('/admindash'), 1500);
+            setTimeout(() => navigate('/admin/ClientManagement'), 1500);
         } catch (err) {
             console.error('Error deleting client:', err);
             setError(err.message);

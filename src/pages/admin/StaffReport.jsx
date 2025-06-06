@@ -522,24 +522,60 @@ const StaffReport = () => {
           </FormControl>
         </Grid>
         
-        {/* Client Selection - Wider dropdown */}
-        <Grid item xs={12} sm={6} md={4} lg={3}>
-          <FormControl fullWidth>
-            <Autocomplete
-              size="small"
-              multiple
-              fullWidth
-              value={selectedClients}
-              onChange={(event, newValue) => setSelectedClients(newValue)}
-              options={clientList}
-              renderInput={(params) => <TextField {...params} label="Clients" />}
-              disableCloseOnSelect
-              limitTags={2}
-              sx={{ minWidth: "300px", width: "100%" }}
-              listboxProps={{ style: { maxHeight: '250px' } }}
-            />
-          </FormControl>
-        </Grid>
+       
+{/* Client Selection - Wider dropdown */}
+<Grid item xs={12} sm={6} md={4} lg={3}>
+  <FormControl fullWidth>
+    <Autocomplete
+      size="small"
+      multiple
+      fullWidth
+      value={selectedClients}
+      onChange={(event, newValue) => setSelectedClients(newValue)}
+      options={clientList}
+      renderInput={(params) => <TextField {...params} label="Clients" />}
+      renderOption={(props, option) => (
+        <Box 
+          component="li" 
+          {...props}
+          sx={{
+            textAlign: 'left !important',
+            justifyContent: 'flex-start !important',
+            alignItems: 'flex-start !important',
+            display: 'flex !important',
+            width: '100%'
+          }}
+        >
+          {option}
+        </Box>
+      )}
+      disableCloseOnSelect
+      limitTags={2}
+      sx={{ 
+        minWidth: "300px", 
+        width: "100%",
+        '& .MuiAutocomplete-option': {
+          textAlign: 'left !important',
+          justifyContent: 'flex-start !important',
+          alignItems: 'flex-start !important'
+        }
+      }}
+      listboxProps={{ 
+        style: { 
+          maxHeight: '250px'
+        },
+        sx: {
+          '& .MuiAutocomplete-option': {
+            textAlign: 'left !important',
+            justifyContent: 'flex-start !important',
+            display: 'flex !important',
+            alignItems: 'flex-start !important'
+          }
+        }
+      }}
+    />
+  </FormControl>
+</Grid>
         
         {/* Group Selection - Wider dropdown */}
         <Grid item xs={12} sm={6} md={4} lg={3}>

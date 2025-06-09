@@ -66,8 +66,8 @@ const StaffReport = () => {
   // State for filter options
   const [staffList, setStaffList] = useState([]);
   const [clientList, setClientList] = useState([]);
-  const [clientsData, setClientsData] = useState([]); // Store full clients data
-  const [groupList, setGroupList] = useState([]); // Added groups list
+  const [clientsData, setClientsData] = useState([]); // Store full clients data for group lookup
+  const [groupList, setGroupList] = useState([]);
   const [assignmentList, setAssignmentList] = useState([]);
   const [financialYearList, setFinancialYearList] = useState([]);
   const [staffHourlyRates, setStaffHourlyRates] = useState([]);
@@ -75,7 +75,7 @@ const StaffReport = () => {
   // Filter selections
   const [selectedStaff, setSelectedStaff] = useState([]);
   const [selectedClients, setSelectedClients] = useState([]);
-  const [selectedGroups, setSelectedGroups] = useState([]); // Added selected groups
+  const [selectedGroups, setSelectedGroups] = useState([]);
   const [selectedAssignments, setSelectedAssignments] = useState([]);
   const [selectedFinancialYears, setSelectedFinancialYears] = useState([]);
   const [dateFrom, setDateFrom] = useState(null);
@@ -119,8 +119,7 @@ const StaffReport = () => {
         setLoading(true);
         await Promise.all([
           fetchStaffWorkData(),
-          fetchStaffList(),
-          fetchClientList()
+          fetchClientList() // Need this for group information
         ]);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -133,7 +132,7 @@ const StaffReport = () => {
     fetchAllData();
   }, []);
 
-  // Fetch staff work data
+  // Fetch staff work data and extract unique dropdown values
   const fetchStaffWorkData = async () => {
     try {
       const { data, error } = await supabase
@@ -149,16 +148,24 @@ const StaffReport = () => {
       setStaffWorkData(filteredByPresence);
       setFilteredData(filteredByPresence);
       
-      // Extract unique assignments and financial years from data
+      // Extract unique values for dropdown lists from Staff Work table
+      const uniqueStaff = [...new Set(filteredByPresence.map(item => item.Name).filter(Boolean))];
+      const uniqueClients = [...new Set(filteredByPresence.map(item => item.Client).filter(Boolean))];
       const uniqueAssignments = [...new Set(filteredByPresence.map(item => item.Assignment).filter(Boolean))];
       const uniqueFinancialYears = [...new Set(
         filteredByPresence
         .map(item => item.Financial_Year)
-        .filter(year => financialYears.includes(year))
-        )];
+        .filter(year => year && financialYears.includes(year))
+      )];
 
+      // Sort lists alphabetically
+      setStaffList(uniqueStaff.sort());
+      setClientList(uniqueClients.sort());
       setAssignmentList(uniqueAssignments.sort());
       setFinancialYearList(uniqueFinancialYears.sort());
+      
+      // Fetch hourly rates for the unique staff found
+      await fetchStaffHourlyRates(uniqueStaff);
       
       // Calculate total hours
       let hoursSum = 0;
@@ -174,27 +181,31 @@ const StaffReport = () => {
     }
   };
 
-  // Fetch staff list and hourly rates
-  const fetchStaffList = async () => {
+  // Fetch hourly rates for the staff found in Staff Work table
+  const fetchStaffHourlyRates = async (staffNames) => {
     try {
-      const { data, error } = await supabase
+      if (!staffNames || staffNames.length === 0) {
+        setStaffHourlyRates([]);
+        return;
+      }
+
+      const { data: staffListData, error: staffListError } = await supabase
         .from("Staff List")
-        .select("*");
-      
-      if (error) throw error;
-      
-      const staffNames = data.map(item => item.Staff_Name).filter(Boolean);
-      staffNames.sort((a, b) => a && b ? a.localeCompare(b) : 0);
-      
-      setStaffList(staffNames);
-      setStaffHourlyRates(data || []);
+        .select('Staff_Name, hourly_rate')
+        .in('Staff_Name', staffNames)
+        .not('Staff_Name', 'is', null);
+
+      if (staffListError) throw staffListError;
+
+      setStaffHourlyRates(staffListData || []);
     } catch (err) {
-      console.error("Error fetching staff list:", err);
-      throw err;
+      console.error("Error fetching staff hourly rates:", err);
+      // Don't throw error here as this is not critical for the main functionality
+      setStaffHourlyRates([]);
     }
   };
 
-  // Fetch client list
+  // Fetch client list to get group information
   const fetchClientList = async () => {
     try {
       const { data, error } = await supabase
@@ -206,14 +217,15 @@ const StaffReport = () => {
       // Store full clients data for group lookup
       setClientsData(data || []);
       
-      const clients = data.map(item => item.Client_Name).filter(Boolean);
-      clients.sort((a, b) => a && b ? a.localeCompare(b) : 0);
+      // Extract unique groups directly from Group column in Clients List table
+      const uniqueGroups = [...new Set(
+        data
+          .map(client => client.Group)
+          .filter(group => group && group.trim() !== '')
+      )];
       
-      setClientList(clients);
-      
-      // Extract unique groups from clients data
-      const uniqueGroups = [...new Set(data.map(item => item.Group).filter(Boolean))];
-      uniqueGroups.sort((a, b) => a && b ? a.localeCompare(b) : 0);
+      // Sort groups alphabetically
+      uniqueGroups.sort((a, b) => a.localeCompare(b));
       
       setGroupList(uniqueGroups);
     } catch (err) {
@@ -222,12 +234,13 @@ const StaffReport = () => {
     }
   };
 
-  // Get group for a client
+  // Get group for a client from the clients data
   const getClientGroup = (clientName) => {
     if (!clientName) return "N/A";
     const client = clientsData.find(client => client.Client_Name === clientName);
     return client && client.Group ? client.Group : "N/A";
   };
+
 
   // Apply filters when any filter changes
   useEffect(() => {

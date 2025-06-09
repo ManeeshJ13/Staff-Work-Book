@@ -105,6 +105,16 @@ const AssignmentReport = () => {
         setLoading(true);
         setError(null);
         
+        // First, fetch the valid staff list
+        const { data: staffListData, error: staffListError } = await supabase
+          .from("Staff List")
+          .select("Staff_Name")
+          .not("Staff_Name", "is", null);
+        
+        if (staffListError) throw staffListError;
+        
+        const validStaffNames = new Set(staffListData.map(item => item.Staff_Name));
+        
         // Use endDate as the earlier date and startDate as the later date for the query
         const { data: periodWorkData, error: workError } = await supabase
           .from("Staff Work")
@@ -114,8 +124,9 @@ const AssignmentReport = () => {
         
         if (workError) throw workError;
         
+        // Filter period staff names to only include those in Staff List
         const periodStaffNames = [...new Set(periodWorkData
-          .filter(record => record.Name)
+          .filter(record => record.Name && validStaffNames.has(record.Name))
           .map(record => record.Name))];
         
         const { data: allStaffData, error: staffError } = await supabase
@@ -126,9 +137,12 @@ const AssignmentReport = () => {
         
         if (staffError) throw staffError;
         
+        // Filter all staff names to only include those in Staff List
         const allStaffNames = [...new Set([
           ...periodStaffNames,
-          ...allStaffData.map(item => item.Name)
+          ...allStaffData
+            .map(item => item.Name)
+            .filter(name => validStaffNames.has(name))
         ])];
         
         const staffList = allStaffNames.map(name => ({
@@ -151,32 +165,35 @@ const AssignmentReport = () => {
           });
         });
         
-        periodWorkData.forEach(record => {
-          const { Name, Date, Hours, Presence } = record;
-          
-          if (!Name || !Date || !summary[Name]) {
-            console.warn("Skipping invalid record:", record);
-            return;
-          }
-          
-          if (!summary[Name][Date]) {
-            summary[Name][Date] = {
-              totalHours: 0,
-              onLeave: false,
-              records: []
-            };
-          }
-          
-          summary[Name][Date].records.push(record);
-          
-          if (Presence === false) {
-            summary[Name][Date].onLeave = true;
-          }
-          
-          if (Hours) {
-            summary[Name][Date].totalHours = Math.round((summary[Name][Date].totalHours + Hours) * 10) / 10;
-          }
-        });
+        // Only process records for staff that are in the Staff List
+        periodWorkData
+          .filter(record => record.Name && validStaffNames.has(record.Name))
+          .forEach(record => {
+            const { Name, Date, Hours, Presence } = record;
+            
+            if (!Date || !summary[Name]) {
+              console.warn("Skipping invalid record:", record);
+              return;
+            }
+            
+            if (!summary[Name][Date]) {
+              summary[Name][Date] = {
+                totalHours: 0,
+                onLeave: false,
+                records: []
+              };
+            }
+            
+            summary[Name][Date].records.push(record);
+            
+            if (Presence === false) {
+              summary[Name][Date].onLeave = true;
+            }
+            
+            if (Hours) {
+              summary[Name][Date].totalHours = Math.round((summary[Name][Date].totalHours + Hours) * 10) / 10;
+            }
+          });
         
         setStaffData(staffList);
         setSummaryData(summary);
@@ -190,7 +207,6 @@ const AssignmentReport = () => {
 
     fetchData();
   }, [startDate, endDate, memoizedDateRange]);
-
   const handleStartDateChange = (newDate) => {
     if (newDate) {
       setStartDate(newDate);
@@ -248,7 +264,7 @@ const AssignmentReport = () => {
     if (hours === 0) {
       return {
         content: "-",
-        style: {}
+        style: {backgroundColor:'rgba(254, 8, 12, 0.15)', color: '#FF0000', fontWeight: 'bold'}
       };
     }
     
@@ -258,6 +274,7 @@ const AssignmentReport = () => {
         style: { backgroundColor: 'rgba(255, 235, 59, 0.3)', color: '#f57c00' }
       };
     }
+
     
     return {
       content: hours,

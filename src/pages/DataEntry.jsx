@@ -276,7 +276,7 @@ const DataEntry = () => {
       if (!formData.presence){
         entries.push({
           Name: staffName,
-          Data: formatDateForDB(formData.date),
+          Date: formatDateForDB(formData.date),
           Presence: false,
           Client: null, 
           Assignment: null,

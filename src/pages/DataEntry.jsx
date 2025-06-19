@@ -33,7 +33,8 @@ import {
   Home as HomeIcon,
   Search as SearchIcon,
   Save as SaveIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  Assignment
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker, TimePicker } from '@mui/x-date-pickers';
@@ -47,7 +48,8 @@ const DataEntry = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
-  const [hoursWarning, setHoursWarning] = useState(null); // New state for hours warning
+  const [hoursWarning, setHoursWarning] = useState(null); // New state for hours warningState
+  const [hoursPerClient, sethoursPerClient] = useState(0);
   
   // Lists that will be fetched from Supabase
   const [clientList, setClientList] = useState([]);
@@ -58,7 +60,7 @@ const DataEntry = () => {
   const [formData, setFormData] = useState({
     date: new Date(),
     presence: true, 
-    client: '',
+    clients: [],
     assignment: '',
     workDescription: '',
     remarks: '',
@@ -116,12 +118,23 @@ const DataEntry = () => {
     
     fetchLists();
   }, []);
-
+  
   useEffect(() => {
     if (!staffName) {
       navigate('/signin');
     }
   }, [staffName, navigate]);
+
+  //calculate hours per client
+  useEffect(()=>{
+    if(formData.clients.length > 0 && formData.hours > 0)
+    {
+      sethoursPerClient((formData.hours / formData.clients.length).toFixed(2));
+    }
+    else{
+      sethoursPerClient(0);
+    }
+  },[formData.clients, formData.hours]);
 
   const handleAttendanceSubmit = async (e) => {
     e.preventDefault();
@@ -130,7 +143,7 @@ const DataEntry = () => {
       // If absent, reset all fields except date and presence
       setFormData({
         ...formData,
-        client: '',
+        client: [],
         assignment: '',
         workDescription: '',
         remarks: '',
@@ -153,6 +166,14 @@ const DataEntry = () => {
 
   const handleDetailSubmit = async (e) => {
     e.preventDefault();
+
+    //validation for multiple clients
+    if (formData.clients.length === 0){
+      setError('Please select atleast one client');
+      return; 
+    }
+    
+    setError(null)
     
     // Check if entered hours match calculated hours and show warning if they don't
     const hoursDifference = Math.abs(formData.hours - formData.calculatedHours);
@@ -243,65 +264,92 @@ const DataEntry = () => {
       
       // Generate current timestamp for submission
       const currentTimestamp = new Date().toISOString();
-      
-      // Create the data object with explicit types that match the database
-      const entryData = {
-        Name: staffName,
-        Date: formatDateForDB(formData.date),
-        Presence: Boolean(formData.presence),
-        // Conditionally set other fields based on presence
-        Client: formData.presence ? formData.client : null,
-        Assignment: formData.presence ? formData.assignment : null,
-        Work_Done: formData.presence ? formData.workDescription : null,
-        Remark: formData.presence ? formData.remarks : null,
-        Financial_Year: formData.presence ? formData.financialYear : '',
-        Start_Time: formData.presence ? formatTimeForDB(formData.startTime) : null,
-        End_Time: formData.presence ? formatTimeForDB(formData.endTime) : null,
-        Hours: formData.presence ? Number(formData.hours) : 0,
-        Completion: formData.presence ? Boolean(formData.completion) : null,
-        TimeStamp: currentTimestamp
-      };
-      
-      console.log('Submitting Data to Supabase:', entryData);
+
+      //calculate hours per client
+      const hoursPerClientValue=formData.presence && formData.clients.length > 0
+      ? Number((formData.hours / formData.clients.length).toFixed(2))
+      :0;
+
+      //create array for entries
+      const entries =[];
+
+      if (!formData.presence){
+        entries.push({
+          Name: staffName,
+          Data: formatDateForDB(formData.date),
+          Presence: false,
+          Client: null, 
+          Assignment: null,
+          Work_Done: null,
+          Remark: null,
+          Financial_Year: '',
+          Start_Time: null,
+          End_Time: null,
+          Hours: 0,
+          Completion: null,
+          TimeStamp: currentTimestamp
+        });
+      } else {
+        //multiple entries
+        formData.clients.forEach(client => {
+        entries.push({
+          Name: staffName,
+          Date: formatDateForDB(formData.date),
+          Presence: true,
+          Client: client,
+          Assignment: formData.assignment,
+          Work_Done: formData.workDescription,
+          Remark: formData.remarks,
+          Financial_Year: formData.financialYear,
+          Start_Time: formatTimeForDB(formData.startTime),
+          End_Time: formatTimeForDB(formData.endTime),
+          Hours: hoursPerClientValue,
+          Completion: Boolean(formData.completion),
+          TimeStamp: currentTimestamp
+        });
+        });
+      }
+
+      console.log('Submitting Data to Supabase:', entries);
 
       // Try fetching the table structure first to verify connection
       const { data: tableInfo, error: tableError } = await supabase
         .from('Staff Work')
         .select('*')
         .limit(0);
-          
+        
       if (tableError) {
         console.error("Error accessing table:", tableError);
         setError(`Table access error: ${tableError.message}`);
         setIsSubmitting(false);
         return false;
       }
-      
+    
       console.log("Table accessed successfully");
 
-      // Now attempt the insert
-      const { data, error } = await supabase
-        .from('Staff Work')
-        .insert([entryData]);
+      // Now attempt the insert with multiple entries
+    const { data, error } = await supabase
+      .from('Staff Work')
+      .insert(entries);
 
-      if (error) {
-        console.error("Error Inserting Data:", error);
-        setError(`Insert error: ${error.message} (Code: ${error.code})`);
-        setIsSubmitting(false);
-        return false;
-      }
-
-      console.log("Data submitted successfully:", data);
-      setIsSubmitting(false);
-      return true;
-    }
-    catch (error) {
-      console.error("Exception during submission:", error);
-      setError(`Unexpected error: ${error.message}`);
+    if (error) {
+      console.error("Error Inserting Data:", error);
+      setError(`Insert error: ${error.message} (Code: ${error.code})`);
       setIsSubmitting(false);
       return false;
     }
-  };
+
+    console.log("Data submitted successfully:", data);
+    setIsSubmitting(false);
+    return true;
+  }
+  catch (error) {
+    console.error("Exception during submission:", error);
+    setError(`Unexpected error: ${error.message}`);
+    setIsSubmitting(false);
+    return false;
+  }
+}; 
 
   if (!staffName) {
     return null;
@@ -523,39 +571,56 @@ const DataEntry = () => {
                 
                 {/* 1st row - Client and Assignment */}
                 <Grid item xs={12}>
-                  <Autocomplete
-                    options={clientList}
-                    value={formData.client}
-                    onChange={(event, newValue) => {
-                      setFormData({...formData, client: newValue || ''});
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Client"
-                        required
-                        fullWidth
-                        size={getInputSize()}
-                        sx={{
-                          width: isMobile ? '100%' : '340px'
-                        }}
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <>
-                              <InputAdornment position="start">
-                                <SearchIcon fontSize={isMobile ? "small" : "medium"} />
-                              </InputAdornment>
-                              {params.InputProps.startAdornment}
-                            </>
-                          )
-                        }}
-                      />
-                    )}
-                    disabled={loading}
-                    disablePortal // Better performance on mobile
-                  />
-                </Grid>
+  <Autocomplete
+    multiple
+    options={clientList}
+    value={formData.clients}
+    onChange={(event, newValue) => {
+      setFormData({...formData, clients: newValue || []});
+      // Clear the error when user selects clients
+      if (newValue && newValue.length > 0) {
+        setError(null);
+      }
+    }}
+    renderInput={(params) => (
+      <TextField
+        {...params}
+        label="Client(s)"
+        // Remove the 'required' prop from here
+        fullWidth
+        size={getInputSize()}
+        error={formData.clients.length === 0} // Show error styling when no clients selected
+        helperText={formData.clients.length === 0 ? "Please select at least one client" : ""}
+        sx={{
+          width: isMobile ? '100%' : '340px'
+        }}
+        InputProps={{
+          ...params.InputProps,
+          startAdornment: (
+            <>
+              <InputAdornment position="start">
+                <SearchIcon fontSize={isMobile ? "small" : "medium"} />
+              </InputAdornment>
+              {params.InputProps.startAdornment}
+            </>
+          )
+        }}
+      />
+    )}
+    renderTags={(tagValue, getTagProps)=>
+      tagValue.map((option,index)=>(
+        <Chip
+        label={option}
+        {...getTagProps({index})}
+        key={option}
+        size={isMobile ? "small" : "medium"}
+        /> 
+      ))
+    }
+    disabled={loading}
+    disablePortal
+  />
+</Grid>
 
                 <Grid item xs={12}>
                   <Autocomplete
@@ -689,6 +754,7 @@ const DataEntry = () => {
                     }}
                     size={getInputSize()}
                   />
+                  
                 </Grid>
 
                 {/* 4th row - Work Description and Remarks */}

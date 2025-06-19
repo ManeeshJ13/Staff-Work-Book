@@ -40,6 +40,9 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DownloadIcon from '@mui/icons-material/Download';
+// SheetJS import for Excel functionality
+import * as XLSX from 'xlsx';
 
 const DailySummary = () => {
   const [staffWorkData, setStaffWorkData] = useState([]);
@@ -53,6 +56,7 @@ const DailySummary = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [downloading, setDownloading] = useState(false);
   
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -191,6 +195,81 @@ const DailySummary = () => {
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
+  };
+
+  // Excel download function
+  const handleDownloadExcel = async () => {
+    if (!staffWorkData.length) {
+      setSnackbarMessage("No data available to download");
+      setSnackbarSeverity("warning");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    try {
+      setDownloading(true);
+
+      // Prepare data for Excel export
+      const excelData = staffWorkData.map((work, index) => ({
+        'S.No': index + 1,
+        'Name': work.Name || 'N/A',
+        'Date': selectedDate,
+        'Presence': work.Presence === true ? 'Present' : work.Presence === false ? 'Absent' : 'N/A',
+        'Client': work.Client || 'N/A',
+        'Assignment': work.Assignment || 'N/A',
+        'Work Done': work.Work_Done || 'N/A',
+        'Financial Year': work.Financial_Year || 'N/A',
+        'Start Time': formatTime(work.Start_Time),
+        'End Time': formatTime(work.End_Time),
+        'Hours': work.Hours || 'N/A',
+        'Completion': work.Completion === true ? 'Completed' : work.Completion === false ? 'Incomplete' : 'N/A',
+        'Timestamp': formatTimestamp(work.TimeStamp)
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Set column widths for better readability
+      const colWidths = [
+        { wch: 6 },   // S.No
+        { wch: 20 },  // Name
+        { wch: 12 },  // Date
+        { wch: 10 },  // Presence
+        { wch: 15 },  // Client
+        { wch: 20 },  // Assignment
+        { wch: 40 },  // Work Done
+        { wch: 12 },  // Financial Year
+        { wch: 12 },  // Start Time
+        { wch: 12 },  // End Time
+        { wch: 8 },   // Hours
+        { wch: 12 },  // Completion
+        { wch: 20 }   // Timestamp
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Daily Summary');
+
+      // Generate filename with date
+      const dateForFileName = selectedDate ? selectedDate.replace(/-/g, '_') : 'unknown_date';
+      const fileName = `Daily_Work_Summary_${dateForFileName}.xlsx`;
+
+      // Download the file
+      XLSX.writeFile(wb, fileName);
+
+      setSnackbarMessage("Excel file downloaded successfully");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+
+    } catch (err) {
+      console.error("Error downloading Excel file:", err);
+      setSnackbarMessage("Failed to download Excel file");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const formatTime = (time) => {
@@ -431,6 +510,26 @@ const DailySummary = () => {
             )}
           </Grid>
         </Paper>
+      )}
+
+      {/* Download Button */}
+      {staffWorkData.length > 0 && (
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            variant="contained"
+            color="success"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownloadExcel}
+            disabled={downloading}
+            sx={{ minWidth: 150 }}
+          >
+            {downloading ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              'Download'
+            )}
+          </Button>
+        </Box>
       )}
 
       {loading ? (

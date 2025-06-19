@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import withAuth from "../../components/withAuth";
+import * as XLSX from 'xlsx';
 import { financialYears } from "../../lib/dataLists";
 import {
   Table,
@@ -445,39 +446,65 @@ const StaffReport = () => {
     return isNaN(cost) ? "N/A" : cost.toFixed(2);
   };
 
-  // Export to CSV
-  const exportToCSV = () => {
-    // Create CSV content
-    const headers = [
-      "Name", "Date", "Presence", "Client", "Group", "Assignment", "Work Done", 
-      "Financial Year", "Hours", "Total Cost"
+  //download into excel
+  const exportToExcel = () =>{
+    //Preparing data for Excel
+    const excelData=filteredData.map(row => ({
+      'Name':row.Name || "N/A",
+      'Date': formatDate(row.Date),
+      'Presence': row.Presence === true ? "Yes" : "No",
+      'Client': row.Client || "N/A",
+      'Group': getClientGroup(row.Client),
+      'Assignment': row.Assignment || "N/A",
+      'Work Done' : row.Work_Done || "N/A",
+      'Financial Year': row.Financial_Year || "N/A",
+      'Hours': row.Hours || "N/A",
+      'Total Cost': calculateTotalCost(row.Name, row.Hours)
+    }));
+
+    //summary row
+    const summaryRow={
+      'Name':'',
+      'Date':'',
+      'Presence':'',
+      'Client':'',
+      'Group':'',
+      'Assignment':'',
+      'Work Done':'',
+      'Financial Year':'',
+      'Hours':totalHours.toFixed(2),
+      'Total Cost':`₹${totalCost.toFixed(2)}`
+    };
+
+    excelData.push(summaryRow);
+
+    //create workbook and worksheet
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.json_to_sheet(excelData);
+
+    //setting column widths
+    const columnWidths=[
+      {wch:15}, //Name
+      {wch:12}, //Date
+      {wch:10}, //Presence
+      {wch:20}, //Client
+      {wch:15}, //Group
+      {wch:20}, //Assignment
+      {wch:40}, //Work Done
+      {wch:15}, //Financial Year
+      {wch:10}, //Hours
+      {wch:12}, //Total Cost
     ];
-    
-    const csvContent = [
-      headers.join(","),
-      ...filteredData.map(row => [
-        row.Name || "N/A",
-        formatDate(row.Date),
-        row.Presence === true ? "Yes" : "No",
-        row.Client || "N/A",
-        getClientGroup(row.Client),
-        row.Assignment || "N/A",
-        `"${(row.Work_Done || "N/A").replace(/"/g, '""')}"`, // Escape quotes in text fields
-        row.Financial_Year || "N/A",
-        row.Hours || "N/A",
-        calculateTotalCost(row.Name, row.Hours)
-      ].join(","))
-    ].join("\n");
-    
-    // Create download link
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `staff_report_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    ws['!cols'] = columnWidths;
+
+    //Adding worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb,ws,'Staff Report');
+
+    //Generating filename using current date
+    const filename = `staff_report_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+    //save file
+    XLSX.writeFile(wb,filename);
   };
 
   // Filter component with wider dropdowns for PC optimization
@@ -791,10 +818,10 @@ const StaffReport = () => {
               <Typography variant="body1">
                 Showing {filteredData.length} entries
               </Typography>
-              <Tooltip title="Export to CSV">
+              <Tooltip title="Export to Excel">
                 <IconButton 
                   color="primary" 
-                  onClick={exportToCSV}
+                  onClick={exportToExcel}
                   disabled={filteredData.length === 0}
                 >
                   <FileDownloadIcon />

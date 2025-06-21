@@ -24,7 +24,9 @@ import {
     DialogActions,
     DialogContent,
     DialogContentText,
-    DialogTitle
+    DialogTitle,
+    FormControlLabel,
+    Switch
 } from "@mui/material";
 
 import Visibility from '@mui/icons-material/Visibility';
@@ -41,7 +43,8 @@ const EditStaff = () => {
     const [staffData, setStaffData] = useState({
         Staff_Name: '',
         hourly_rate: '',
-        Password: ''
+        Password: '',
+        Enabled: true
     });
     const [showPassword, setShowPassword] = useState(false);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -67,7 +70,8 @@ const EditStaff = () => {
             setStaffData({
                 Staff_Name: '',
                 hourly_rate: '',
-                Password: ''
+                Password: '',
+                Enabled: true
             });
         }
     }, [selectedStaffId]);
@@ -79,7 +83,7 @@ const EditStaff = () => {
             
             const { data, error } = await supabase
                 .from('Staff List')
-                .select('id, Staff_Name, hourly_rate')
+                .select('id, Staff_Name, hourly_rate, Enabled')
                 .order('Staff_Name', { ascending: true });
                 
             if (error) {
@@ -104,7 +108,7 @@ const EditStaff = () => {
             
             const { data, error } = await supabase
                 .from('Staff List')
-                .select('Staff_Name, hourly_rate, Password')
+                .select('Staff_Name, hourly_rate, Password, Enabled')
                 .eq('id', staffId)
                 .single();
                 
@@ -116,7 +120,8 @@ const EditStaff = () => {
                 setStaffData({
                     Staff_Name: data.Staff_Name || '',
                     hourly_rate: data.hourly_rate || '',
-                    Password: data.Password || ''
+                    Password: data.Password || '',
+                    Enabled: data.Enabled !== undefined ? data.Enabled : true
                 });
                 
                 setDebugInfo(`Fetched details for staff ID: ${staffId}`);
@@ -168,6 +173,16 @@ const EditStaff = () => {
         setError('');
         setSuccess(false);
     };
+
+    // Handle enabled toggle
+    const handleEnabledChange = (e) => {
+        setStaffData(prev => ({
+            ...prev,
+            Enabled: e.target.checked
+        }));
+        setError('');
+        setSuccess(false);
+    };
     
     // Toggle password visibility
     const handleTogglePasswordVisibility = () => {
@@ -214,7 +229,8 @@ const EditStaff = () => {
             // Prepare update data
             const updateData = {
                 Staff_Name: staffData.Staff_Name.trim(),
-                hourly_rate: staffData.hourly_rate === '' ? null : parseFloat(staffData.hourly_rate)
+                hourly_rate: staffData.hourly_rate === '' ? null : parseFloat(staffData.hourly_rate),
+                Enabled: staffData.Enabled
             };
             
             // Only update password if it's not empty
@@ -407,7 +423,7 @@ const EditStaff = () => {
                                         >
                                             {staffList.map((staff) => (
                                                 <MenuItem key={staff.id} value={staff.id}>
-                                                    {staff.Staff_Name}
+                                                    {staff.Staff_Name} {staff.Enabled === false && ' (Disabled)'}
                                                 </MenuItem>
                                             ))}
                                         </Select>
@@ -487,6 +503,42 @@ const EditStaff = () => {
                                                         ),
                                                     }}
                                                 />
+
+                                                <Box sx={{ 
+                                                    display: 'flex', 
+                                                    alignItems: 'center',
+                                                    py: 1,
+                                                    px: 1
+                                                }}>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Switch
+                                                                checked={staffData.Enabled}
+                                                                onChange={handleEnabledChange}
+                                                                disabled={isSubmitting}
+                                                                color="primary"
+                                                            />
+                                                        }
+                                                        label={
+                                                            <Typography
+                                                                variant="body1"
+                                                                sx={{
+                                                                    fontSize: { xs: '0.95rem', md: '1rem' },
+                                                                    fontWeight: 500,
+                                                                    color: staffData.Enabled ? 'success.main' : 'error.main'
+                                                                }}
+                                                            >
+                                                                {staffData.Enabled ? 'Enabled' : 'Disabled'}
+                                                            </Typography>
+                                                        }
+                                                        sx={{ 
+                                                            m: 0,
+                                                            '& .MuiFormControlLabel-label': {
+                                                                ml: 1
+                                                            }
+                                                        }}
+                                                    />
+                                                </Box>
                                             </>
                                         )}
                                     </Box>
@@ -554,6 +606,11 @@ const EditStaff = () => {
                 <DialogContent>
                     <DialogContentText id="alert-dialog-description">
                         Are you sure you want to update the details for this staff member?
+                        {!staffData.Enabled && (
+                            <Box component="span" sx={{ display: 'block', mt: 1, color: 'error.main', fontWeight: 'bold' }}>
+                                Note: This staff member will be disabled and unable to access the system.
+                            </Box>
+                        )}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>

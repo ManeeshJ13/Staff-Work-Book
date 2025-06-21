@@ -37,7 +37,7 @@ const SignIn = () => {
       try {
         const { data, error } = await supabase
           .from("Staff List")
-          .select("Staff_Name, Password");
+          .select("Staff_Name, Password, Enabled");
 
         if (error) {
           console.error("Error fetching staff list:", error);
@@ -83,12 +83,19 @@ const SignIn = () => {
     }
 
     // Check for staff credentials against the Password column in Staff List
+    // Only check among enabled staff members
     const staffMember = staffList.find(
-      staff => staff.Staff_Name === name
+      staff => staff.Staff_Name === name && staff.Enabled === true
     );
 
     if (!staffMember) {
-      setError("Invalid username. Please select a valid staff name.");
+      // Check if the staff exists but is disabled
+      const disabledStaff = staffList.find(staff => staff.Staff_Name === name);
+      if (disabledStaff && disabledStaff.Enabled === false) {
+        setError("This staff account is currently disabled. Please contact administrator.");
+      } else {
+        setError("Invalid username. Please select a valid staff name.");
+      }
       return;
     }
 
@@ -101,8 +108,10 @@ const SignIn = () => {
     navigate("/staffdashboard");
   };
 
-  // Create options list for Autocomplete excluding admin
-  const staffOptions = staffList.map(staff => staff.Staff_Name);
+  // Create options list for Autocomplete - only include enabled staff
+  const staffOptions = staffList
+    .filter(staff => staff.Enabled === true)
+    .map(staff => staff.Staff_Name);
 
   return (
     <Container 

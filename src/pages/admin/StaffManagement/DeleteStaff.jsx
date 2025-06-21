@@ -50,14 +50,15 @@ const DeleteStaff = () => {
         fetchStaffList();
     }, []);
     
-    // Function to fetch staff list from Supabase
+    // Function to fetch active staff list from Supabase
     const fetchStaffList = async () => {
         try {
             setIsLoading(true);
             
             const { data, error } = await supabase
                 .from('Staff List')
-                .select('id, Staff_Name, hourly_rate')
+                .select('id, Staff_Name, hourly_rate, Enabled')
+                .eq('Enabled', true) // Only fetch enabled staff
                 .order('Staff_Name', { ascending: true });
                 
             if (error) {
@@ -65,7 +66,7 @@ const DeleteStaff = () => {
             }
             
             setStaffList(data || []);
-            setDebugInfo(`Fetched ${data ? data.length : 0} staff members`);
+            setDebugInfo(`Fetched ${data ? data.length : 0} active staff members`);
         } catch (err) {
             console.error('Error fetching staff:', err);
             setError(err.message);
@@ -96,7 +97,7 @@ const DeleteStaff = () => {
     // Open confirmation dialog
     const handleOpenConfirmDialog = () => {
         if (!selectedStaffId) {
-            setError('Please select a staff member to delete');
+            setError('Please select a staff member to deletee');
             return;
         }
         setConfirmDialogOpen(true);
@@ -107,8 +108,8 @@ const DeleteStaff = () => {
         setConfirmDialogOpen(false);
     };
     
-    // Handle delete submission
-    const handleDelete = async () => {
+    // Handle disable submission
+    const handleDisable = async () => {
         setConfirmDialogOpen(false);
         setIsSubmitting(true);
         setError('');
@@ -116,22 +117,22 @@ const DeleteStaff = () => {
         
         try {
             if (!selectedStaffId) {
-                throw new Error('No staff selected for deletion');
+                throw new Error('No staff selected for disabling');
             }
             
-            // Delete from Supabase
-            const { error: deleteError } = await supabase
+            // Update the Enabled column to false in Supabase
+            const { error: updateError } = await supabase
                 .from('Staff List')
-                .delete()
+                .update({ Enabled: false })
                 .eq('id', selectedStaffId);
                 
-            if (deleteError) {
-                console.error('Supabase delete error:', deleteError);
-                throw new Error(`Failed to delete staff: ${deleteError.message || 'Database error'}`);
+            if (updateError) {
+                console.error('Supabase update error:', updateError);
+                throw new Error(`Failed to disable staff: ${updateError.message || 'Database error'}`);
             }
             
-            setDebugInfo(`Successfully deleted staff with ID: ${selectedStaffId}`);
-            console.log(`Successfully deleted staff ID: ${selectedStaffId}`);
+            setDebugInfo(`Successfully disabled staff with ID: ${selectedStaffId}`);
+            console.log(`Successfully disabled staff ID: ${selectedStaffId}`);
             
             // Success state
             setSuccess(true);
@@ -143,7 +144,7 @@ const DeleteStaff = () => {
             // Redirect after 1.5 seconds
             setTimeout(() => navigate('/admin/StaffManagement'), 1500);
         } catch (err) {
-            console.error('Error deleting staff:', err);
+            console.error('Error disabling staff:', err);
             setError(err.message);
             setShowDebug(true);
         } finally {
@@ -237,7 +238,7 @@ const DeleteStaff = () => {
                             fontSize: { xs: '0.875rem', md: '1rem' }
                         }}
                     >
-                        Staff deleted successfully! Redirecting...
+                        Staff disabled successfully! Redirecting...
                     </Alert>
                 )}
                 
@@ -270,7 +271,7 @@ const DeleteStaff = () => {
                                     fontSize: { xs: '0.875rem', md: '1rem' }
                                 }}
                             >
-                                No staff members available.
+                                No active staff members available.
                             </Alert>
                         ) : (
                             <Box sx={{ width: '100%', mb: { xs: 2, md: 3 } }}>
@@ -352,7 +353,7 @@ const DeleteStaff = () => {
                                     }
                                 }}
                             >
-                                {isSubmitting ? 'Deleting Staff...' : 'Delete Staff'}
+                                {isSubmitting ? 'Disabling Staff...' : 'Delete Staff'}
                             </Button>
                         </Box>
                     </>
@@ -367,19 +368,19 @@ const DeleteStaff = () => {
                 aria-describedby="alert-dialog-description"
             >
                 <DialogTitle id="alert-dialog-title">
-                    {"Confirm Staff Deletion"}
+                    {"Confirm Staff Disable"}
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText id="alert-dialog-description">
-                        Are you sure you want to delete {selectedStaffName}? This action cannot be undone.
+                        Are you sure you want to disable {selectedStaffName}? 
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseConfirmDialog} color="primary">
                         Cancel
                     </Button>
-                    <Button onClick={handleDelete} color="error" autoFocus>
-                        Delete
+                    <Button onClick={handleDisable} color="error" autoFocus>
+                        Disable
                     </Button>
                 </DialogActions>
             </Dialog>

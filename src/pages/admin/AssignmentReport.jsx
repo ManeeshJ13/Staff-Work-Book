@@ -109,6 +109,7 @@ const AssignmentReport = () => {
         const { data: staffListData, error: staffListError } = await supabase
           .from("Staff List")
           .select("Staff_Name")
+          .eq("Enabled",true)
           .not("Staff_Name", "is", null);
         
         if (staffListError) throw staffListError;

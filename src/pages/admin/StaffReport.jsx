@@ -136,22 +136,37 @@ const StaffReport = () => {
   // Fetch staff work data and extract unique dropdown values
   const fetchStaffWorkData = async () => {
     try {
-      const { data, error } = await supabase
-        .from("Staff Work")
-        .select("*")
-        .order("Date", { ascending: false });
+      //fetching alll the data using pagination
+      let allData = [];
+      let from = 0;
+      let limit = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      
-      // Filter out data where Presence is false
-      const filteredByPresence = data ? data.filter(work => work.Presence !== false) : [];
-      
+      while (hasMore) {
+  const { data, error } = await supabase
+    .from("Staff Work")
+    .select("*")
+    .order("Date", { ascending: false })
+    .range(from, from + limit - 1);
+
+  if (error) throw error;
+
+  if (data && data.length > 0) {
+    allData = [...allData, ...data];
+    from += limit;
+    hasMore = data.length === limit;
+  } else {
+    hasMore = false;
+  }
+}
+
+      //filter out Data when absent
+      const filteredByPresence = allData ? allData.filter (work => work.Presence !== false) : [];
       setStaffWorkData(filteredByPresence);
       setFilteredData(filteredByPresence);
-      
+    
       // Extract unique values for dropdown lists from Staff Work table
       const uniqueStaff = [...new Set(filteredByPresence.map(item => item.Name).filter(Boolean))];
-      const uniqueClients = [...new Set(filteredByPresence.map(item => item.Client).filter(Boolean))];
       const uniqueAssignments = [...new Set(filteredByPresence.map(item => item.Assignment).filter(Boolean))];
       const uniqueFinancialYears = [...new Set(
         filteredByPresence
@@ -161,18 +176,17 @@ const StaffReport = () => {
 
       // Sort lists alphabetically
       setStaffList(uniqueStaff.sort());
-      setClientList(uniqueClients.sort());
       setAssignmentList(uniqueAssignments.sort());
       setFinancialYearList(uniqueFinancialYears.sort());
-      
+
       // Fetch hourly rates for the unique staff found
       await fetchStaffHourlyRates(uniqueStaff);
-      
+    
       // Calculate total hours
       let hoursSum = 0;
       filteredByPresence.forEach(work => {
-        if (work.Hours && !isNaN(work.Hours)) {
-          hoursSum += work.Hours;
+        if (work.Hours && !isNaN(parseFloat(work.Hours))) {
+          hoursSum += parseFloat(work.Hours);
         }
       });
       setTotalHours(hoursSum);
@@ -180,7 +194,8 @@ const StaffReport = () => {
       console.error("Error fetching staff work data:", err);
       throw err;
     }
-  };
+    };
+
 
   // Fetch hourly rates for the staff found in Staff Work table
   const fetchStaffHourlyRates = async (staffNames) => {
@@ -217,6 +232,17 @@ const StaffReport = () => {
       
       // Store full clients data for group lookup
       setClientsData(data || []);
+
+      //Extract unique clients list from Clients List table
+      const uniqueClientsFromTable = [...new Set(
+        data
+        .map(client => client.Client_Name)
+        .filter(name => name && name.trim()!=='')
+      )];
+
+      //sorting clients alphabetically
+      uniqueClientsFromTable.sort((a,b) => a.localeCompare(b));
+      setClientList(uniqueClientsFromTable);
       
       // Extract unique groups directly from Group column in Clients List table
       const uniqueGroups = [...new Set(
@@ -320,13 +346,13 @@ const StaffReport = () => {
     filtered.forEach(work => {
       // Calculate cost
       const cost = calculateTotalCostValue(work.Name, work.Hours);
-      if (!isNaN(cost)) {
+      if (!isNaN(cost) && cost>0) {
         costSum += cost;
       }
       
       // Calculate hours
-      if (work.Hours && !isNaN(work.Hours)) {
-        hoursSum += work.Hours;
+      if (work.Hours && !isNaN(parseFloat(work.Hours))) {
+        hoursSum += parseFloat(work.Hours);
       }
     });
     
@@ -436,9 +462,14 @@ const StaffReport = () => {
     if (!staffName || !hours) return NaN;
     
     const staffRate = staffHourlyRates.find(staff => staff.Staff_Name === staffName);
-    if (!staffRate) return NaN;
+    console.log('Staff:', staffName, 'Rate:', staffRate, 'Hours:', hours); 
+
     
-    return staffRate.hourly_rate * hours;
+    if (!staffRate || !staffRate.hourly_rate) return NaN;
+
+    const cost=parseFloat(staffRate.hourly_rate) * parseFloat(hours);
+    console.log('Calculated Cose:', cost) 
+    return cost;
   };
 
   const calculateTotalCost = (staffName, hours) => {
@@ -687,7 +718,8 @@ const StaffReport = () => {
     </Box>
   );
 
- return (
+
+return (
   <Box sx={{ maxWidth: "100%", overflow: "hidden" }}>
     <Box sx={{ p: 3, maxWidth: "1400px", mx: "auto" }}>
       {/* Header with title and home button */}
@@ -938,20 +970,6 @@ const StaffReport = () => {
           </TableRow>
         ))}
       </TableBody>
-      <TableFooter>
-        <TableRow sx={{ backgroundColor: "grey.100" }}>
-          <TableCell colSpan={7} align="right" sx={{ fontWeight: "bold" }}>
-            Totals:
-          </TableCell>
-          <TableCell sx={{ fontWeight: "bold" }}>
-            {totalHours.toFixed(2)}
-          </TableCell>
-          <TableCell sx={{ fontWeight: "bold" }}>
-            ₹{totalCost.toFixed(2)}
-          </TableCell>
-          <TableCell></TableCell>
-        </TableRow>
-      </TableFooter>
     </Table>
   </TableContainer>
 </Box>
@@ -1086,6 +1104,8 @@ const StaffReport = () => {
     </Box>
   </Box>
 );
+
 };
+
 
 export default withAuth(StaffReport);

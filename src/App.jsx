@@ -4,8 +4,7 @@ import SignIn from './pages/SignIn';
 import DataEntry from './pages/DataEntry';
 import AdminDashboard from './pages/AdminDashboard';
 import DailySummary from './pages/admin/DailySummary';
-
-import {Analytics} from '@vercel/analytics/react'
+import {Analytics} from '@vercel/analytics/react';
 
 
 

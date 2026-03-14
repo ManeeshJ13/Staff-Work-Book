@@ -5,6 +5,8 @@ import DataEntry from './pages/DataEntry';
 import AdminDashboard from './pages/AdminDashboard';
 import DailySummary from './pages/admin/DailySummary';
 
+import {Analytics} from '@vercel/analytics/react'
+
 
 
 import StaffDashboard from './pages/StaffDashboard';
@@ -34,6 +36,8 @@ import EditAssignment from './pages/admin/AssignmentManagement/EditAssignment';
 //added to do something to vercel cache
 const App=()=> {
   return (
+    <>
+      <Analytics />
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Dashboard />} />
@@ -73,6 +77,7 @@ const App=()=> {
         
       </Routes>
     </BrowserRouter>
+  </>
   );
 }
 

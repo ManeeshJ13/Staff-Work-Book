@@ -30,7 +30,7 @@ serve(async () => {
     const istNow = new Date(now.getTime() + istOffset);
 
     // Today in IST as YYYY-MM-DD
-    const todayIST = istNow.toISOString().split("T")[0];
+    const todayIST = "2026-05-20"
 
     // Convert IST day boundaries back to UTC for querying created_at
     const startOfDayIST = new Date(`${todayIST}T00:00:00.000+05:30`);
@@ -71,13 +71,16 @@ serve(async () => {
       grouped[name][date].push({ client, work });
     }
 
-    // Build single message
-    let message = ` *Daily Work Summary — ${todayIST}*\n`;
-    message += `${Object.keys(grouped).length} employee(s) reported.\n`;
-    message += `─────────────────────\n\n`;
+    // Send header message
+    await sendToGroup(
+      `*Daily Work Summary — ${todayIST}*\n${Object.keys(grouped).length} employee(s) reported.`
+    );
 
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // Send one message per employee
     for (const [name, dateMap] of Object.entries(grouped)) {
-      message += ` *${name}*\n\n`;
+      let message = ` *${name}*\n\n`;
 
       for (const [date, tasks] of Object.entries(dateMap)) {
         message += ` *${date}*\n`;
@@ -88,10 +91,9 @@ serve(async () => {
         message += `\n`;
       }
 
-      message += `─────────────────────\n\n`;
+      await sendToGroup(message.trim());
+      await new Promise((r) => setTimeout(r, 1000));
     }
-
-    await sendToGroup(message.trim());
 
     return new Response("Done", { status: 200 });
 

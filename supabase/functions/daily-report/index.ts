@@ -30,7 +30,7 @@ serve(async () => {
     const istNow = new Date(now.getTime() + istOffset);
 
     // Today in IST as YYYY-MM-DD
-    const todayIST = "2026-05-20"
+    const todayIST = istNow.toISOString().split("T")[0];
 
     // Convert IST day boundaries back to UTC for querying created_at
     const startOfDayIST = new Date(`${todayIST}T00:00:00.000+05:30`);

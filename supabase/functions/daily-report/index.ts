@@ -36,7 +36,9 @@ serve(async () => {
     const startOfDayIST = new Date(`${todayIST}T00:00:00.000+05:30`);
     const endOfDayIST   = new Date(`${todayIST}T23:59:59.999+05:30`);
 
-    console.log("Fetching rows inserted between:", startOfDayIST.toISOString(), "and", endOfDayIST.toISOString());
+    console.log("Today IST:", todayIST);
+    console.log("Start UTC:", startOfDayIST.toISOString());
+    console.log("End UTC:", endOfDayIST.toISOString());
 
     const { data: entries, error } = await supabase
       .from("Staff Work")
@@ -46,6 +48,8 @@ serve(async () => {
       .order("Name", { ascending: true })
       .order("Date", { ascending: true });
 
+    console.log("Entries found:", JSON.stringify(entries));
+    
     if (error) {
       console.error("Supabase error:", error);
       return new Response("DB error", { status: 500 });

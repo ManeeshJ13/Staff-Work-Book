@@ -6,6 +6,7 @@ const GREEN_API_TOKEN = Deno.env.get("GREEN_API_TOKEN")!;
 const GROUP_CHAT_ID   = Deno.env.get("GROUP_CHAT_ID")!;
 const SUPABASE_URL    = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_KEY    = Deno.env.get("SB_SERVICE_ROLE_KEY")!;
+const GROUP_CHAT_ID_2 = Deno.env.get("GROUP_CHAT_ID_2")!;
 
 async function sendToGroup(message: string) {
   const res = await fetch(
@@ -18,6 +19,19 @@ async function sendToGroup(message: string) {
   );
   const text = await res.text();
   console.log("Green API status:", res.status, text);
+}
+
+async function sendToSpecificGroup(chatId: string, message: string) {
+  const res = await fetch(
+    `https://api.green-api.com/waInstance${GREEN_API_ID}/sendMessage/${GREEN_API_TOKEN}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chatId, message }),
+    }
+  );
+  const text = await res.text();
+  console.log("Green API status (group 2):", res.status, text);
 }
 
 serve(async () => {
@@ -82,6 +96,9 @@ serve(async () => {
 
     await new Promise((r) => setTimeout(r, 1500));
 
+    // Names that go to second group — add as many as needed
+    const redirectedEmployees = ["Steeve Tom"];
+
     // Send one message per employee
     for (const [name, dateMap] of Object.entries(grouped)) {
       let message = ` *${name}*\n\n`;
@@ -95,7 +112,13 @@ serve(async () => {
         message += `\n`;
       }
 
-      await sendToGroup(message.trim());
+      // Send to second group if name is in redirect list, else main group
+      if (redirectedEmployees.includes(name)) {
+        await sendToSpecificGroup(GROUP_CHAT_ID_2, message.trim());
+      } else {
+        await sendToGroup(message.trim());
+      }
+
       await new Promise((r) => setTimeout(r, 1000));
     }
 

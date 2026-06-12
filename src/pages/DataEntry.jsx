@@ -572,54 +572,34 @@ const DataEntry = () => {
                 {/* 1st row - Client and Assignment */}
                 <Grid item xs={12}>
   <Autocomplete
-    multiple
     options={clientList}
-    value={formData.clients}
+    value={formData.clients[0] || null}
     onChange={(event, newValue) => {
-      setFormData({...formData, clients: newValue || []});
-      // Clear the error when user selects clients
-      if (newValue && newValue.length > 0) {
-        setError(null);
-      }
+      setFormData({...formData, clients: newValue ? [newValue] : []});
+      if (newValue) setError(null);
     }}
     renderInput={(params) => (
       <TextField
         {...params}
-        label="Client(s)"
-        // Remove the 'required' prop from here
+        label="Client"
         fullWidth
         size={getInputSize()}
-        error={formData.clients.length === 0} // Show error styling when no clients selected
-        helperText={formData.clients.length === 0 ? "Please select at least one client" : ""}
-        sx={{
-          width: isMobile ? '100%' : '340px'
-        }}
+        error={formData.clients.length === 0}
+        helperText={formData.clients.length === 0 ? "Please select a client" : ""}
+        sx={{ width: isMobile ? '100%' : '340px' }}
         InputProps={{
           ...params.InputProps,
           startAdornment: (
-            <>
-              <InputAdornment position="start">
-                <SearchIcon fontSize={isMobile ? "small" : "medium"} />
-              </InputAdornment>
-              {params.InputProps.startAdornment}
-            </>
+            <InputAdornment position="start">
+              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
+            </InputAdornment>
           )
         }}
       />
     )}
-    renderTags={(tagValue, getTagProps)=>
-      tagValue.map((option,index)=>(
-        <Chip
-        label={option}
-        {...getTagProps({index})}
-        key={option}
-        size={isMobile ? "small" : "medium"}
-        /> 
-      ))
-    }
     disabled={loading}
     disablePortal
-  />
+/>
 </Grid>
 
                 <Grid item xs={12}>

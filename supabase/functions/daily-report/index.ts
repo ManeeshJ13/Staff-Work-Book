@@ -56,7 +56,7 @@ serve(async () => {
 
     const { data: entries, error } = await supabase
       .from("Staff Work")
-      .select("Name, Date, Client, Work_Done, TimeStamp")
+      .select("Name, Date, Client, Work_Done, Hours, TimeStamp")
       .gte("TimeStamp", startOfDayIST.toISOString())
       .lte("TimeStamp", endOfDayIST.toISOString())
       .order("Name", { ascending: true })
@@ -76,7 +76,7 @@ serve(async () => {
     }
 
     // Group by Name → Date → list of {client, work}
-    const grouped: Record<string, Record<string, { client: string; work: string }[]>> = {};
+    const grouped: Record<string, Record<string, { client: string; work: string; Hours:number }[]>> = {};
 
     for (const entry of entries) {
       const name   = entry["Name"]      ?? "Unknown";
@@ -86,7 +86,8 @@ serve(async () => {
 
       if (!grouped[name]) grouped[name] = {};
       if (!grouped[name][date]) grouped[name][date] = [];
-      grouped[name][date].push({ client, work });
+      const hours = entry["Hours"] ?? 0;
+      grouped[name][date].push({ client, work, hours });;
     }
 
     // Send header message
@@ -107,7 +108,7 @@ serve(async () => {
         message += ` *${date}*\n`;
         for (const t of tasks) {
           message += `    *${t.client}*\n`;
-          message += `    ${t.work}\n`;
+          message += `    ${t.work} ${t.hours} hrs\n`;
         }
         message += `\n`;
       }

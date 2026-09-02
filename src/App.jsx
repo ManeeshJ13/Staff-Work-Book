@@ -7,7 +7,6 @@ import DailySummary from './pages/admin/DailySummary';
 import {Analytics} from '@vercel/analytics/react';
 
 
-
 import StaffDashboard from './pages/StaffDashboard';
 import DataEdit from './pages/DataEdit'
 import StaffReport from './pages/admin/StaffReport';
@@ -70,9 +69,6 @@ const App=()=> {
         <Route path="/admin/AssignmentManagement/DeleteAssignment" element={<DeleteAssignment/>}/>"
         <Route path="/admin/AssignmentManagement/EditAssignment" element={<EditAssignment/>}/>"
 
-        
-       
-        
         
       </Routes>
     </BrowserRouter>

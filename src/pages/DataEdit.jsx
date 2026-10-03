@@ -639,32 +639,21 @@ const DataEdit = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl 
-                  fullWidth 
-                  disabled={!currentEntry.presence}
-                  size={isMobile ? "small" : "medium"}
-                >
-                  <InputLabel id="completion-label">Completion Status</InputLabel>
-                  <Select
-                    labelId="completion-label"
-                    value={currentEntry.completion ? "true" : "false"}
-                    onChange={(e) => setCurrentEntry({...currentEntry, completion: e.target.value === "true"})}
-                    label="Completion Status"
-                    required={currentEntry.presence}
-                    MenuProps={{
-                      PaperProps: {
-                        style: {
-                          maxHeight: isMobile ? 200 : 300
-                        }
-                      }
-                    }}
-                  >
-                    <MenuItem value="true" dense={isMobile}>Completed</MenuItem>
-                    <MenuItem value="false" dense={isMobile}>In Progress</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1, opacity: currentEntry.presence ? 1 : 0.4 }}>
+  <Typography variant="body1" sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+    Ready for Billing
+  </Typography>
+  <Switch
+    checked={Boolean(currentEntry.completion)}
+    onChange={(e) => setCurrentEntry({...currentEntry, completion: e.target.checked})}
+    color="success"
+    disabled={!currentEntry.presence}
+  />
+  <Typography variant="body2" color={currentEntry.completion ? "success.main" : "text.secondary"}>
+    {currentEntry.completion ? "Yes" : "No"}
+  </Typography>
+</Box>
 
               {/* Time Tracking */}
               <Grid item xs={12} sm={4}>

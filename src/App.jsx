@@ -6,7 +6,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import DailySummary from './pages/admin/DailySummary';
 import {Analytics} from '@vercel/analytics/react';
 
-
+  
 import StaffDashboard from './pages/StaffDashboard';
 import DataEdit from './pages/DataEdit'
 import StaffReport from './pages/admin/StaffReport';

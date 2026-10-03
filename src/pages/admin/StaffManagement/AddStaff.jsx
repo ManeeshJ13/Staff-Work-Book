@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabaseClient';
 import withAuth from '../../../components/withAuth';
@@ -14,8 +14,11 @@ import {
     Button,
     Alert,
     CircularProgress,
-    Snackbar
-} from "@mui/material"
+    Snackbar,
+    InputAdornment,
+    IconButton
+} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 function AdminPage(){
     return <div>Admin-Only Content</div>;
@@ -26,23 +29,25 @@ const AddStaff = () => {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
     const navigate = useNavigate();
+
     const [newStaffName, setNewStaffName] = useState('');
     const [hourlyRate, setHourlyRate] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [debugInfo, setDebugInfo] = useState('');
     const [showDebug, setShowDebug] = useState(false);
-    
-    // Handle back button
+
     const handleBack = () => {
         navigate('/admin/StaffManagement');
     };
-    
-    // Reset the form 
+
     const resetForm = () => {
         setNewStaffName('');
         setHourlyRate('');
+        setPassword('');
         setError('');
     };
 
@@ -51,87 +56,88 @@ const AddStaff = () => {
         setIsSubmitting(true);
         setError('');
         setSuccess(false);
-      try {
-    // Validate inputs
-    const trimmedName = newStaffName.trim();
-    if (!trimmedName) {
-        throw new Error('Staff name cannot be empty');
-    }
 
-    const rate = parseFloat(hourlyRate);
-    if (isNaN(rate) || rate <= 0) {
-        throw new Error('Please enter a valid hourly rate (greater than 0)');
-    }
+        try {
+            const trimmedName = newStaffName.trim();
+            if (!trimmedName) {
+                throw new Error('Staff name cannot be empty');
+            }
 
-    // Check for duplicates in Supabase (case insensitive)
-    const { data: existingStaff, error: queryError } = await supabase
-        .from('Staff List')
-        .select('Staff_Name')
-        .ilike('Staff_Name', trimmedName);
+            const rate = parseFloat(hourlyRate);
+            if (isNaN(rate) || rate <= 0) {
+                throw new Error('Please enter a valid hourly rate (greater than 0)');
+            }
 
-    if (queryError) {
-        console.error('Supabase query error:', queryError);
-        throw new Error(`Failed to check existing staff: ${queryError.message}`);
-    }
-    
-    if (existingStaff && existingStaff.length > 0) {
-        throw new Error('Staff already exists in the list');
-    }
-    
-    // Find the highest ID currently in the table
-    const { data: staffWithMaxId, error: maxIdError } = await supabase
-        .from('Staff List')
-        .select('id')
-        .order('id', { ascending: false })
-        .limit(1);
-        
-    if (maxIdError) {
-        console.error('Error fetching max ID:', maxIdError);
-        throw new Error(`Failed to generate new ID: ${maxIdError.message}`);
-    }
-    
-    // Calculate the next ID (max + 1) or start with 1 if table is empty
-    const nextId = staffWithMaxId && staffWithMaxId.length > 0 
-        ? parseInt(staffWithMaxId[0].id) + 1 
-        : 1;
-        
-    setDebugInfo(`Found highest ID: ${staffWithMaxId && staffWithMaxId.length > 0 ? staffWithMaxId[0].id : 'none'}\nCreating new staff with ID: ${nextId}`);
-    console.log(`Creating new staff with ID: ${nextId}`);
-    
-    // Add to Supabase with the explicitly set next ID
-    const { data: insertedStaff, error: insertError } = await supabase
-        .from('Staff List')
-        .insert([{ 
-            id: nextId,
-            Staff_Name: trimmedName,
-            hourly_rate: rate
-        }])
-        .select();
+            if (!password.trim()) {
+                throw new Error('Password cannot be empty');
+            }
 
-    if (insertError) {
-        console.error('Supabase insert error:', insertError);
-        throw new Error(`Failed to add staff: ${insertError.message || 'Database error'}`);
-    }
-    
-    console.log('Successfully inserted staff:', insertedStaff);
+            // Check for duplicates
+            const { data: existingStaff, error: queryError } = await supabase
+                .from('Staff List')
+                .select('Staff_Name')
+                .ilike('Staff_Name', trimmedName);
 
-    // Success state
-    setSuccess(true);
-    resetForm();
-    
-    // Redirect after 1.5 seconds
-    setTimeout(() => navigate('/admin/StaffManagement'), 1500);
-} catch (err) {
-    console.error('Error adding staff:', err);
-    setError(err.message);
-    setShowDebug(true);
-} finally {
-    setIsSubmitting(false);
-}  setDebugInfo('');
-    }
+            if (queryError) {
+                console.error('Supabase query error:', queryError);
+                throw new Error(`Failed to check existing staff: ${queryError.message}`);
+            }
 
-        
-    
+            if (existingStaff && existingStaff.length > 0) {
+                throw new Error('Staff already exists in the list');
+            }
+
+            // Get next ID
+            const { data: staffWithMaxId, error: maxIdError } = await supabase
+                .from('Staff List')
+                .select('id')
+                .order('id', { ascending: false })
+                .limit(1);
+
+            if (maxIdError) {
+                console.error('Error fetching max ID:', maxIdError);
+                throw new Error(`Failed to generate new ID: ${maxIdError.message}`);
+            }
+
+            const nextId = staffWithMaxId && staffWithMaxId.length > 0
+                ? parseInt(staffWithMaxId[0].id) + 1
+                : 1;
+
+            setDebugInfo(`Found highest ID: ${staffWithMaxId && staffWithMaxId.length > 0 ? staffWithMaxId[0].id : 'none'}\nCreating new staff with ID: ${nextId}`);
+            console.log(`Creating new staff with ID: ${nextId}`);
+
+            const { data: insertedStaff, error: insertError } = await supabase
+                .from('Staff List')
+                .insert([{
+                    id: nextId,
+                    Staff_Name: trimmedName,
+                    hourly_rate: rate,
+                    Password: password.trim(),
+                    Enabled: true
+                }])
+                .select();
+
+            if (insertError) {
+                console.error('Supabase insert error:', insertError);
+                throw new Error(`Failed to add staff: ${insertError.message || 'Database error'}`);
+            }
+
+            console.log('Successfully inserted staff:', insertedStaff);
+
+            setSuccess(true);
+            resetForm();
+
+            setTimeout(() => navigate('/admin/StaffManagement'), 1500);
+
+        } catch (err) {
+            console.error('Error adding staff:', err);
+            setError(err.message);
+            setShowDebug(true);
+        } finally {
+            setIsSubmitting(false);
+        }
+        setDebugInfo('');
+    };
 
     return (
         <Container
@@ -156,7 +162,7 @@ const AddStaff = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     borderRadius: { xs: 1.5, md: 2 },
-                    boxShadow: { 
+                    boxShadow: {
                         xs: '0 4px 8px rgba(0,0,0,0.05)',
                         md: '0 10px 15px rgba(0,0,0,0.1)'
                     },
@@ -164,16 +170,16 @@ const AddStaff = () => {
                     transition: 'all 0.3s ease'
                 }}
             >
-                <Box 
+                <Box
                     sx={{
                         display: 'flex',
-                        alignItems: 'center', 
+                        alignItems: 'center',
                         justifyContent: isMobile ? 'center' : 'space-between',
                         mb: { xs: 1, md: 2 }
                     }}
                 >
                     {!isMobile && (
-                        <Button 
+                        <Button
                             component={Link}
                             to="/admin/StaffManagement"
                             variant='contained'
@@ -183,7 +189,7 @@ const AddStaff = () => {
                             BACK
                         </Button>
                     )}
-                    
+
                     <Typography
                         variant={isMobile ? "h6" : "h5"}
                         component="h1"
@@ -195,14 +201,14 @@ const AddStaff = () => {
                     >
                         ADD NEW STAFF
                     </Typography>
-                    
+
                     {!isMobile && <Box sx={{ width: 64 }} />}
                 </Box>
 
                 {error && (
-                    <Alert 
-                        severity="error" 
-                        sx={{ 
+                    <Alert
+                        severity="error"
+                        sx={{
                             mb: { xs: 1.5, md: 2 },
                             fontSize: { xs: '0.875rem', md: '1rem' }
                         }}
@@ -210,23 +216,23 @@ const AddStaff = () => {
                         {error}
                     </Alert>
                 )}
-                
+
                 {success && (
-                    <Alert 
-                        severity="success" 
-                        sx={{ 
+                    <Alert
+                        severity="success"
+                        sx={{
                             mb: { xs: 1.5, md: 2 },
                             fontSize: { xs: '0.875rem', md: '1rem' }
                         }}
                     >
-                        Staff added successfully! Redirecting...
+                        Staff added successfully!
                     </Alert>
                 )}
-                
+
                 {showDebug && debugInfo && (
-                    <Alert 
-                        severity="info" 
-                        sx={{ 
+                    <Alert
+                        severity="info"
+                        sx={{
                             mb: { xs: 1.5, md: 2 },
                             fontSize: { xs: '0.75rem', md: '0.875rem' },
                             '& .MuiAlert-message': {
@@ -239,14 +245,15 @@ const AddStaff = () => {
                 )}
 
                 <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-                    <Box 
-                        sx={{ 
+                    <Box
+                        sx={{
                             display: 'flex',
-                            flexDirection: { xs: 'column', md: 'row' },
+                            flexDirection: 'column',
                             gap: { xs: 2, md: 3 },
                             mb: { xs: 2, md: 3 }
                         }}
                     >
+                        {/* Staff Name */}
                         <Box sx={{ width: '100%' }}>
                             <Typography
                                 variant="subtitle1"
@@ -285,6 +292,7 @@ const AddStaff = () => {
                             />
                         </Box>
 
+                        {/* Hourly Rate */}
                         <Box sx={{ width: '100%' }}>
                             <Typography
                                 variant="subtitle1"
@@ -303,8 +311,8 @@ const AddStaff = () => {
                                 variant="outlined"
                                 fullWidth
                                 type="number"
-                                inputProps={{ 
-                                    min: "0", 
+                                inputProps={{
+                                    min: "0",
                                     step: "0.01",
                                     inputMode: 'decimal'
                                 }}
@@ -328,11 +336,62 @@ const AddStaff = () => {
                                 }}
                             />
                         </Box>
+
+                        {/* Password */}
+                        <Box sx={{ width: '100%' }}>
+                            <Typography
+                                variant="subtitle1"
+                                component="p"
+                                sx={{
+                                    fontWeight: 500,
+                                    mb: 1,
+                                    fontSize: { xs: '0.95rem', md: '1rem' }
+                                }}
+                            >
+                                Password
+                            </Typography>
+                            <TextField
+                                id="password"
+                                placeholder="Enter password"
+                                variant="outlined"
+                                fullWidth
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                disabled={isSubmitting}
+                                size={isMobile ? "small" : "medium"}
+                                InputProps={{
+                                    sx: {
+                                        fontSize: { xs: '0.95rem', md: '1rem' },
+                                        borderRadius: { xs: 1, md: 1.5 }
+                                    },
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label="toggle password visibility"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                edge="end"
+                                            >
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    )
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        '&:hover fieldset': {
+                                            borderColor: theme.palette.primary.main,
+                                        },
+                                    },
+                                }}
+                            />
+                        </Box>
                     </Box>
 
-                    <Box 
-                        sx={{ 
-                            display: 'flex', 
+                    <Box
+                        sx={{
+                            display: 'flex',
                             flexDirection: { xs: 'column', sm: 'row' },
                             gap: { xs: 1.5, sm: 2 },
                             mt: { xs: 1, md: 2 }
@@ -353,7 +412,7 @@ const AddStaff = () => {
                                 Cancel
                             </Button>
                         )}
-                        
+
                         <Button
                             type="submit"
                             variant="contained"
@@ -370,7 +429,7 @@ const AddStaff = () => {
                                 }
                             }}
                         >
-                            {isSubmitting ? 'Adding Staff...' : 'Add Staff'}
+                            {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Add Staff'}
                         </Button>
                     </Box>
                 </form>

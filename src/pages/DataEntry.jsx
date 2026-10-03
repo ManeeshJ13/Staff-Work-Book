@@ -70,7 +70,7 @@ const DataEntry = () => {
     hours: 8,
     calculatedHours: 8,
     hasUserEditedHours: false,
-    completion: true
+    completion: false
   });
 
   // Fetch client list and assignment list from Supabase
@@ -663,25 +663,20 @@ const DataEntry = () => {
                 </Grid>
 
                 <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel id="completion-label">Completion Status</InputLabel>
-                    <Select
-                      labelId="completion-label"
-                      value={formData.completion ? "true" : "false"}
-                      onChange={(e) => setFormData({...formData, completion: e.target.value === "true"})}
-                      label="Completion Status"
-                      required
-                      size={getInputSize()}
-                      sx={{
-                        width:'100%',
-                        textAlign:'left'
-                      }}
-                    >
-                      <MenuItem value="true">Completed</MenuItem>
-                      <MenuItem value="false">In Progress</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1 }}>
+    <Typography variant="body1" sx={{ fontSize: getInputSize() === 'small' ? '0.875rem' : '1rem' }}>
+      Ready for Billing
+    </Typography>
+    <Switch
+      checked={Boolean(formData.completion)}
+      onChange={(e) => setFormData({...formData, completion: e.target.checked})}
+      color="success"
+    />
+    <Typography variant="body2" color={formData.completion ? "success.main" : "text.secondary"}>
+      {formData.completion ? "Yes" : "No"}
+    </Typography>
+  </Box>
+</Grid>
 
                 {/* 3rd row - Time Tracking */}
                 <Grid item xs={12} sm={6}>

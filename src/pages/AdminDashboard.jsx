@@ -89,7 +89,8 @@ const AdminLayout = () => {
     { text: 'Time and Cost Report', icon: <Assessment />, path: '/admin/StaffReport' },
     { text: 'Client Management', icon: <People />, path: '/admin/ClientManagement' },
     { text: 'Staff Management', icon: <PersonAdd />, path: '/admin/StaffManagement' },
-    { text: 'Assignment Management', icon: <Assignment />, path: '/admin/AssignmentManagement' }
+    { text: 'Assignment Management', icon: <Assignment />, path: '/admin/AssignmentManagement' },
+    { text: 'Invoice Management', icon: <Assignment />, path: '/admin/InvoiceManagement' }
   ];
 
   const drawer = (

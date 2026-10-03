@@ -30,6 +30,11 @@ import AddAssignment from './pages/admin/AssignmentManagement/AddAssignment';
 import DeleteAssignment from './pages/admin/AssignmentManagement/DeleteAssignment';
 import EditAssignment from './pages/admin/AssignmentManagement/EditAssignment';
 
+//invoice
+import InvoiceManagement from './pages/admin/InvoiceManagement';
+import CreateInvoice from './pages/admin/InvoiceManagement/CreateInvoice';
+import InvoiceReport from './pages/admin/InvoiceManagement/InvoiceReport';
+
 
 //added to do something to vercel cache
 const App=()=> {
@@ -69,6 +74,11 @@ const App=()=> {
         <Route path="/admin/AssignmentManagement/DeleteAssignment" element={<DeleteAssignment/>}/>"
         <Route path="/admin/AssignmentManagement/EditAssignment" element={<EditAssignment/>}/>"
 
+        {/*Invoice*/}
+        {/* Invoice */}
+        <Route path="/admin/InvoiceManagement" element={<InvoiceManagement/>}/>
+        <Route path="/admin/InvoiceManagement/CreateInvoice" element={<CreateInvoice/>}/>
+        <Route path="/admin/InvoiceManagement/InvoiceReport" element={<InvoiceReport/>}/>
         
       </Routes>
     </BrowserRouter>

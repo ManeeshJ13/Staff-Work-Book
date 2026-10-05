@@ -564,39 +564,7 @@ const DataEntry = () => {
                   </FormControl>
                 </Grid>
 
-                {/* Completion Status Toggle */}
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1 }}>
-                    <Typography variant="body1" sx={{ fontSize: getInputSize() === 'small' ? '0.875rem' : '1rem' }}>
-                      Completion Status
-                    </Typography>
-                    <Switch
-                      checked={Boolean(formData.completion)}
-                      onChange={(e) => setFormData({ ...formData, completion: e.target.checked })}
-                      color="success"
-                    />
-                    <Typography variant="body2" color={formData.completion ? "success.main" : "text.secondary"}>
-                      {formData.completion ? "Yes" : "No"}
-                    </Typography>
-                  </Box>
-                </Grid>
-
-                {/* Ready for Billing Toggle */}
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1 }}>
-                    <Typography variant="body1" sx={{ fontSize: getInputSize() === 'small' ? '0.875rem' : '1rem' }}>
-                      Ready for Billing
-                    </Typography>
-                    <Switch
-                      checked={Boolean(formData.ready_for_billing)}
-                      onChange={(e) => setFormData({ ...formData, ready_for_billing: e.target.checked })}
-                      color="warning"
-                    />
-                    <Typography variant="body2" color={formData.ready_for_billing ? "warning.main" : "text.secondary"}>
-                      {formData.ready_for_billing ? "Yes" : "No"}
-                    </Typography>
-                  </Box>
-                </Grid>
+                
 
                 {/* Work Description */}
                 <Grid container spacing={2}>
@@ -623,7 +591,7 @@ const DataEntry = () => {
                       fullWidth
                       variant="outlined"
                       placeholder="Add any additional comments or notes here"
-                      sx={{ width: isMobile ? '100%' : '400px' }}
+                      sx={{ width: isMobile ? '100%' : '380px' }}
                       size={getInputSize()}
                     />
                   </Grid>
@@ -670,6 +638,40 @@ const DataEntry = () => {
                     size={getInputSize()}
                     sx={{ width: isMobile ? '100%' : '120px' }}
                   />
+                </Grid>
+
+                {/* Completion Status Toggle */}
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1 }}>
+                    <Typography variant="body1" sx={{ fontSize: getInputSize() === 'small' ? '0.875rem' : '1rem' }}>
+                      Completion Status
+                    </Typography>
+                    <Switch
+                      checked={Boolean(formData.completion)}
+                      onChange={(e) => setFormData({ ...formData, completion: e.target.checked })}
+                      color="success"
+                    />
+                    <Typography variant="body2" color={formData.completion ? "success.main" : "text.secondary"}>
+                      {formData.completion ? "Yes" : "No"}
+                    </Typography>
+                  </Box>
+                </Grid>
+
+                {/* Ready for Billing Toggle */}
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1 }}>
+                    <Typography variant="body1" sx={{ fontSize: getInputSize() === 'small' ? '0.875rem' : '1rem' }}>
+                      Ready for Billing
+                    </Typography>
+                    <Switch
+                      checked={Boolean(formData.ready_for_billing)}
+                      onChange={(e) => setFormData({ ...formData, ready_for_billing: e.target.checked })}
+                      color="warning"
+                    />
+                    <Typography variant="body2" color={formData.ready_for_billing ? "warning.main" : "text.secondary"}>
+                      {formData.ready_for_billing ? "Yes" : "No"}
+                    </Typography>
+                  </Box>
                 </Grid>
 
                 {/* Form Actions */}

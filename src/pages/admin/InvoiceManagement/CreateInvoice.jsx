@@ -60,7 +60,7 @@ const CreateInvoice = () => {
             const { data, error } = await supabase
                 .from('Staff Work')
                 .select('No, Name, Date, Client, Work_Done, Assignment')
-                .eq('Completion', true)
+                .eq('Ready_for_Billing', true)
                 .eq('Invoiced', false)
                 .order('Date', { ascending: false });
 

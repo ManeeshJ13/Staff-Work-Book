@@ -82,6 +82,22 @@ const InvoiceManagement = () => {
 
                         <Button
                             component={Link}
+                            to="/admin/InvoiceManagement/EditInvoice"
+                            variant="contained"
+                            fullWidth={isMobile}
+                            sx={{
+                                px: { xs: 2, sm: 4 },
+                                py: { xs: 1, sm: 1.5 },
+                                fontSize: { xs: '0.875rem', sm: '1rem' },
+                                textTransform: 'none',
+                                maxWidth: { sm: 200 }
+                            }}
+                        >
+                            EDIT INVOICE
+                        </Button>
+
+                        <Button
+                            component={Link}
                             to="/admin/InvoiceManagement/InvoiceReport"
                             variant="contained"
                             fullWidth={isMobile}

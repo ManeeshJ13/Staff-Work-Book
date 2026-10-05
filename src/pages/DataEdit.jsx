@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { financialYears } from '../lib/dataLists';
 
-// Material-UI imports
 import {
   Container,
   Paper,
@@ -71,100 +71,96 @@ const DataEdit = () => {
   const [currentEntry, setCurrentEntry] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Lists that will be fetched from Supabase
   const [clientList, setClientList] = useState([]);
   const [assignmentList, setAssignmentList] = useState([]);
-  const [financialYears, setFinancialYears] = useState(['2023', '2024', '2025']);
 
-  // Get the date for 7 days ago
   const getOneWeekAgo = useCallback(() => {
     const date = new Date();
     date.setDate(date.getDate() - 7);
     return date;
   }, []);
 
-  // Format date for display
-  const formatDate = useCallback((dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+  const parseTimeString = useCallback((timeString) => {
+    if (!timeString) return null;
+    try {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    } catch {
+      return null;
+    }
   }, []);
 
-  // Fetch client and assignment lists from Supabase
+  const calculateHours = useCallback((startTime, endTime) => {
+    if (!startTime || !endTime) return 0;
+    const diffMs = endTime - startTime;
+    const diffHrs = diffMs / (1000 * 60 * 60);
+    return Number(diffHrs.toFixed(1));
+  }, []);
+
+  const formatTimeForDB = useCallback((date) => {
+    if (!date) return null;
+    return date instanceof Date ?
+      `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` : null;
+  }, []);
+
+  const formatDateForDB = useCallback((date) => {
+    if (!date) return null;
+    return date instanceof Date ?
+      `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}` : null;
+  }, []);
+
   useEffect(() => {
     const fetchLists = async () => {
       try {
-        // Fetch clients
         const { data: clientData, error: clientError } = await supabase
-          .from('Clients List') 
-          .select('Client_Name'); 
+          .from('Clients List')
+          .select('Client_Name');
         if (clientError) throw clientError;
-        
-        // Fetch assignments from Assignments List table
+
         const { data: assignmentData, error: assignmentError } = await supabase
           .from('Assignments List')
           .select('Assignment_Name');
         if (assignmentError) throw assignmentError;
 
-        // Process clients
         const sortedClients = clientData
           .map(item => item.Client_Name)
-          .filter(Boolean) // Remove null/undefined
+          .filter(Boolean)
           .sort((a, b) => a.localeCompare(b));
-        
         setClientList(sortedClients);
 
-        // Process assignments
         const sortedAssignments = assignmentData
           .map(item => item.Assignment_Name)
-          .filter(Boolean) // Remove null/undefined
+          .filter(Boolean)
           .sort((a, b) => a.localeCompare(b));
-        
         setAssignmentList(sortedAssignments);
-
       } catch (error) {
         console.error("Error fetching lists:", error);
-        setError(`Failed to load lists: ${error.message}`);
-        // Fallback assignments if fetch fails
         setAssignmentList(['Audit', 'Tax Return', 'Consulting', 'Bookkeeping']);
       }
     };
-    
     fetchLists();
   }, []);
 
-  // Fetch work entries for the past week
   useEffect(() => {
     if (!staffName) {
       navigate('/signin');
       return;
     }
-
     const fetchWorkEntries = async () => {
       setLoading(true);
       setError(null);
-      
       try {
         const oneWeekAgo = getOneWeekAgo();
-        const oneWeekAgoFormatted = oneWeekAgo.toISOString().split('T')[0]; // Format as YYYY-MM-DD
-        
+        const oneWeekAgoFormatted = oneWeekAgo.toISOString().split('T')[0];
         const { data, error } = await supabase
           .from('Staff Work')
           .select('*')
           .eq('Name', staffName)
           .gte('Date', oneWeekAgoFormatted)
           .order('Date', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        console.log('Fetched work entries:', data);
+        if (error) throw error;
         setWorkEntries(data || []);
       } catch (error) {
         console.error('Error fetching work entries:', error);
@@ -173,25 +169,18 @@ const DataEdit = () => {
         setLoading(false);
       }
     };
-
     fetchWorkEntries();
   }, [staffName, navigate, getOneWeekAgo]);
 
-  // Navigate to dashboard if not signed in
   useEffect(() => {
-    if (!staffName) {
-      navigate('/signin');
-    }
+    if (!staffName) navigate('/signin');
   }, [staffName, navigate]);
 
-  // Handle expanding/collapsing entry details
   const handleExpandClick = useCallback((id) => {
     setExpandedId(expandedId === id ? null : id);
   }, [expandedId]);
 
-  // Open edit dialog for an entry
   const handleEditClick = useCallback((entry) => {
-    // Parse the date and times for the form
     let parsedEntry = {
       ...entry,
       date: entry.Date ? new Date(entry.Date) : new Date(),
@@ -204,167 +193,50 @@ const DataEdit = () => {
       financialYear: entry.Financial_Year || 2024,
       hours: entry.Hours || 0,
       calculatedHours: calculateHours(parseTimeString(entry.Start_Time), parseTimeString(entry.End_Time)),
-      completion: entry.Completion !== null ? entry.Completion : true,
-      presence: entry.Presence !== null ? entry.Presence : true
+      completion: entry.Completion !== null ? entry.Completion : false,
+      ready_for_billing: entry.Ready_for_Billing !== null ? entry.Ready_for_Billing : false,
+      presence: entry.Presence !== null ? entry.Presence : true,
     };
-    
     setCurrentEntry(parsedEntry);
     setEditDialogOpen(true);
-  }, []);
+  }, [parseTimeString, calculateHours]);
 
-  // Parse time string (HH:MM) to Date object
-  const parseTimeString = (timeStr) => {
-    if (!timeStr) return new Date(new Date().setHours(9, 0, 0, 0));
-    
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours || 0);
-    date.setMinutes(minutes || 0);
-    date.setSeconds(0);
-    date.setMilliseconds(0);
-    return date;
-  };
-
-  // Calculate hours between two times
-  const calculateHours = (startTime, endTime) => {
-    if (!startTime || !endTime) return 0;
-    
-    const diffMs = endTime - startTime;
-    const diffHrs = diffMs / (1000 * 60 * 60);
-    return Number(diffHrs.toFixed(1));
-  };
-
-  // Handle time changes in the form
   const handleTimeChange = useCallback((field, value) => {
-    const updatedEntry = {
-      ...currentEntry,
-      [field]: value
-    };
-    
-    if (field === 'startTime' || field === 'endTime') {
-      if (updatedEntry.startTime && updatedEntry.endTime) {
-        const calculatedHrs = calculateHours(updatedEntry.startTime, updatedEntry.endTime);
-        updatedEntry.calculatedHours = calculatedHrs;
-        // Auto-fill the hours field with calculated hours if user hasn't manually edited
-        if (field === 'endTime' && !currentEntry.hasUserEditedHours) {
-          updatedEntry.hours = calculatedHrs;
-        }
+    setCurrentEntry(prev => {
+      const newData = { ...prev, [field]: value };
+      if (newData.startTime && newData.endTime) {
+        newData.calculatedHours = calculateHours(newData.startTime, newData.endTime);
       }
-    }
-    
-    setCurrentEntry(updatedEntry);
-  }, [currentEntry]);
-
-  // Handle hours change
-  const handleHoursChange = useCallback((e) => {
-    setCurrentEntry({
-      ...currentEntry,
-      hours: Number(e.target.value),
-      hasUserEditedHours: true // Flag to track if user has manually edited hours
+      return newData;
     });
-  }, [currentEntry]);
+  }, [calculateHours]);
 
-  // Format time for display
-  const formatTime = useCallback((timeStr) => {
-    if (!timeStr) return 'N/A';
-    
-    // Try to parse the time string into hours and minutes
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    
-    // Create a new date and set the hours and minutes
-    const date = new Date();
-    date.setHours(hours || 0);
-    date.setMinutes(minutes || 0);
-    
-    // Format the time with AM/PM
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  }, []);
-
-  // Format time for database
-  const formatTimeForDB = useCallback((date) => {
-    if (!date) return null;
-    return date instanceof Date ? 
-      `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}` : 
-      null;
-  }, []);
-  
-  // Format date for database
-  const formatDateForDB = useCallback((date) => {
-    if (!date) return null;
-    return date instanceof Date ? 
-      `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}` : 
-      null;
-  }, []);
-
-  //deletion of entry
   const handleDeleteEntry = async (entry) => {
-  setIsSubmitting(true);
-  setError(null);
-  
-  try {
-    console.log('Deleting entry from Supabase:', entry.No);
-
-    // Perform the deletion
-    const { data, error } = await supabase
-      .from('Staff Work')
-      .delete()
-      .eq('No', entry.No); // Using the primary key for deletion
-
-    if (error) {
-      throw error;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from('Staff Work')
+        .delete()
+        .eq('No', entry.No);
+      if (error) throw error;
+      setSuccess("Work entry deleted successfully!");
+      setWorkEntries(workEntries.filter(e => e.id !== entry.id));
+      setEditDialogOpen(false);
+      setTimeout(() => navigate('/staffdashboard'), 1500);
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+      setError(`Failed to delete: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    console.log("Entry deleted successfully");
-    setSuccess("Work entry deleted successfully!");
-    
-    // Update the local state to remove the deleted entry
-    setWorkEntries(workEntries.filter(e => e.id !== entry.id));
-    
-    // Close any open dialogs
-    setEditDialogOpen(false);
-    //setDeleteDialogOpen(false); // If you have a separate delete confirmation dialog
-    
-    // Navigate back to staff dashboard after a short delay to show success message
-    setTimeout(() => {
-      console.error("Error deleting entry:",error);
-      navigate('/staffdashboard');
-    }, 1500); // 1.5 second delay to allow user to see success message
-    
-  }
-  catch (error) {
-    console.error("Error deleting entry:", error);
-    setError(`Failed to delete: ${error.message}`);
-  }
-  finally {
-    setIsSubmitting(false);
-  }
-};
-
-// Optional: Add a confirmation dialog handler
-{/*const handleDeleteConfirmation = () => {
-  // You might want to show a confirmation dialog first
-  if (window.confirm("Are you sure you want to delete this entry? This action cannot be undone.")) {
-    handleDeleteEntry();
-  }
-};*/}
-
-
-// Then call handleDeleteEntry() from the confirmation dialog's confirm button
-
-  // Handle form submission to update the entry
   const handleUpdateEntry = async () => {
     setIsSubmitting(true);
     setError(null);
-    
     try {
-      // Generate current timestamp for update
       const currentTimestamp = new Date().toISOString();
-      
-      // Create the data object for update
       const entryData = {
         Name: staffName,
         Date: formatDateForDB(currentEntry.date),
@@ -378,58 +250,39 @@ const DataEdit = () => {
         End_Time: currentEntry.presence ? formatTimeForDB(currentEntry.endTime) : null,
         Hours: currentEntry.presence ? Number(currentEntry.hours) : 0,
         Completion: currentEntry.presence ? Boolean(currentEntry.completion) : null,
-        TimeStamp: currentTimestamp // Update the timestamp
+        Ready_for_Billing: currentEntry.presence ? Boolean(currentEntry.ready_for_billing) : null,
+        TimeStamp: currentTimestamp
       };
-      
-      console.log('Updating data in Supabase:', entryData);
 
-      // Perform the update
       const { data, error } = await supabase
         .from('Staff Work')
         .update(entryData)
-        .eq('No', currentEntry.No); // Using the primary key for the update
+        .eq('No', currentEntry.No);
+      if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
-      console.log("Data updated successfully");
       setSuccess("Work entry updated successfully!");
-      
-      // Update the local state to reflect the changes
-      setWorkEntries(workEntries.map(entry => 
+      setWorkEntries(workEntries.map(entry =>
         entry.id === currentEntry.id ? { ...entry, ...entryData } : entry
       ));
-      
-      // Close the dialog
       setEditDialogOpen(false);
-      
-      // Navigate back to staff dashboard after a short delay to show success message
-      setTimeout(() => {
-        navigate('/staffdashboard');
-      }, 1500); // 1.5 second delay to allow user to see success message
-      
-    }
-    catch (error) {
+      setTimeout(() => navigate('/staffdashboard'), 1500);
+    } catch (error) {
       console.error("Error updating entry:", error);
       setError(`Failed to update: ${error.message}`);
-    }
-    finally {
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Edit dialog component
   const renderEditDialog = () => {
     if (!currentEntry) return null;
-    
     return (
-      <Dialog 
-        open={editDialogOpen} 
+      <Dialog
+        open={editDialogOpen}
         onClose={() => setEditDialogOpen(false)}
         fullWidth
         maxWidth="md"
-        fullScreen={isMobile} // Full screen on mobile devices
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
             borderRadius: isMobile ? 0 : 1,
@@ -443,87 +296,44 @@ const DataEdit = () => {
             <Typography variant="h6">
               {isMobile ? "Edit Entry" : "Edit Work Entry"}
             </Typography>
-            <IconButton 
+            <IconButton
               onClick={() => setEditDialogOpen(false)}
               edge="end"
               aria-label="close"
-              sx={{ 
-                padding: isMobile ? 1 : 0.5,
-                '&:active': {
-                  backgroundColor: theme.palette.action.selected
-                }
-              }}
+              sx={{ padding: isMobile ? 0.5 : 1 }}
             >
               <CloseIcon />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent 
-          dividers
-          sx={{ 
-            paddingTop: isMobile ? 2 : 3,
-            overflowY: 'auto',
-            '-webkit-overflow-scrolling': 'touch' // Improves scrolling on iOS
-          }}
-        >
+
+        <DialogContent dividers>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Grid container spacing={isMobile ? 2 : 3}>
+            <Grid container spacing={isMobile ? 1.5 : 2} sx={{ pt: 1 }}>
+
               {/* Date and Presence */}
               <Grid item xs={12} sm={6}>
                 <DatePicker
                   label="Date"
                   value={currentEntry.date}
-                  onChange={(newDate) => setCurrentEntry({...currentEntry, date: newDate})}
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      fullWidth 
-                      required 
-                      size={isMobile ? "small" : "medium"} 
-                      sx={{ mb: isMobile ? 1 : 0 }}
-                    />
-                  )}
-                  PopperProps={{
-                    placement: isMobile ? 'bottom' : 'bottom-start',
-                    modifiers: [{
-                      name: 'preventOverflow',
-                      enabled: true,
-                      options: {
-                        boundary: document.body
-                      }
-                    }]
+                  onChange={(newDate) => setCurrentEntry({ ...currentEntry, date: newDate })}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      size: isMobile ? "small" : "medium"
+                    }
                   }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <FormControl 
-                  fullWidth
-                  sx={{ 
-                    height: '100%', 
-                    display: 'flex', 
-                    alignItems: isMobile ? 'flex-start' : 'center' 
-                  }}
-                >
+                <FormControl fullWidth sx={{ height: '100%', display: 'flex', alignItems: isMobile ? 'flex-start' : 'center' }}>
                   <FormControlLabel
                     control={
                       <Switch
                         checked={currentEntry.presence}
-                        onChange={(e) => setCurrentEntry({...currentEntry, presence: e.target.checked})}
+                        onChange={(e) => setCurrentEntry({ ...currentEntry, presence: e.target.checked })}
                         color="primary"
-                        sx={{ 
-                          '& .MuiSwitch-switchBase': {
-                            padding: 0.5,
-                          },
-                          '& .MuiSwitch-thumb': {
-                            width: isMobile ? 16 : 20,
-                            height: isMobile ? 16 : 20,
-                          },
-                          '&:active': {
-                            '& .MuiSwitch-thumb': {
-                              width: isMobile ? 17 : 21,
-                            },
-                          }
-                        }}
                       />
                     }
                     label={currentEntry.presence ? "Present" : "Absent"}
@@ -531,15 +341,15 @@ const DataEdit = () => {
                 </FormControl>
               </Grid>
 
-              {/* Client and Assignment */}
+              {/* Client */}
               <Grid item xs={12} sm={6}>
                 <Autocomplete
                   options={clientList}
                   value={currentEntry.client}
                   onChange={(event, newValue) => {
-                    setCurrentEntry({...currentEntry, client: newValue || ''});
+                    setCurrentEntry({ ...currentEntry, client: newValue || '' });
                   }}
-                  disablePortal={isMobile} // Better mobile experience
+                  disablePortal={isMobile}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -561,21 +371,18 @@ const DataEdit = () => {
                     />
                   )}
                   disabled={!currentEntry.presence}
-                  ListboxProps={{
-                    style: {
-                      maxHeight: isMobile ? '40vh' : '25vh'
-                    }
-                  }}
                 />
               </Grid>
+
+              {/* Assignment */}
               <Grid item xs={12} sm={6}>
                 <Autocomplete
                   options={assignmentList}
                   value={currentEntry.assignment}
                   onChange={(event, newValue) => {
-                    setCurrentEntry({...currentEntry, assignment: newValue || ''});
+                    setCurrentEntry({ ...currentEntry, assignment: newValue || '' });
                   }}
-                  disablePortal={isMobile} // Better mobile experience
+                  disablePortal={isMobile}
                   renderInput={(params) => (
                     <TextField
                       {...params}
@@ -583,32 +390,16 @@ const DataEdit = () => {
                       required={currentEntry.presence}
                       fullWidth
                       size={isMobile ? "small" : "medium"}
-                      InputProps={{
-                        ...params.InputProps,
-                        startAdornment: (
-                          <>
-                            <InputAdornment position="start">
-                              <SearchIcon fontSize={isMobile ? "small" : "medium"} />
-                            </InputAdornment>
-                            {params.InputProps.startAdornment}
-                          </>
-                        )
-                      }}
                     />
                   )}
                   disabled={!currentEntry.presence}
-                  ListboxProps={{
-                    style: {
-                      maxHeight: isMobile ? '40vh' : '25vh'
-                    }
-                  }}
                 />
               </Grid>
 
-              {/* Financial Year and Completion */}
+              {/* Financial Year */}
               <Grid item xs={12} sm={6}>
-                <FormControl 
-                  fullWidth 
+                <FormControl
+                  fullWidth
                   disabled={!currentEntry.presence}
                   size={isMobile ? "small" : "medium"}
                 >
@@ -616,44 +407,95 @@ const DataEdit = () => {
                   <Select
                     labelId="financial-year-label"
                     value={currentEntry.financialYear}
-                    onChange={(e) => setCurrentEntry({...currentEntry, financialYear: Number(e.target.value)})}
+                    onChange={(e) => setCurrentEntry({ ...currentEntry, financialYear: Number(e.target.value) })}
                     label="Financial Year"
                     required={currentEntry.presence}
-                    MenuProps={{
-                      PaperProps: {
-                        style: {
-                          maxHeight: isMobile ? 200 : 300
-                        }
-                      }
-                    }}
+                    MenuProps={{ PaperProps: { style: { maxHeight: isMobile ? 200 : 300 } } }}
                   >
                     {financialYears.map(year => (
-                      <MenuItem 
-                        key={year} 
-                        value={Number(year)}
-                        dense={isMobile}
-                      >
-                        {year}
-                      </MenuItem>
+                      <MenuItem key={year} value={Number(year)} dense={isMobile}>{year}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', pl: 1, opacity: currentEntry.presence ? 1 : 0.4 }}>
-  <Typography variant="body1" sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
-    Ready for Billing
-  </Typography>
-  <Switch
-    checked={Boolean(currentEntry.completion)}
-    onChange={(e) => setCurrentEntry({...currentEntry, completion: e.target.checked})}
-    color="success"
-    disabled={!currentEntry.presence}
-  />
-  <Typography variant="body2" color={currentEntry.completion ? "success.main" : "text.secondary"}>
-    {currentEntry.completion ? "Yes" : "No"}
-  </Typography>
-</Box>
+              {/* Completion Status Toggle */}
+              <Grid item xs={12} sm={6}>
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  pl: 1,
+                  opacity: currentEntry.presence ? 1 : 0.4
+                }}>
+                  <Typography variant="body1" sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                    Completion Status
+                  </Typography>
+                  <Switch
+                    checked={Boolean(currentEntry.completion)}
+                    onChange={(e) => setCurrentEntry({ ...currentEntry, completion: e.target.checked })}
+                    color="success"
+                    disabled={!currentEntry.presence}
+                  />
+                  <Typography variant="body2" color={currentEntry.completion ? "success.main" : "text.secondary"}>
+                    {currentEntry.completion ? "Yes" : "No"}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {/* Ready for Billing Toggle */}
+              <Grid item xs={12} sm={6}>
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  pl: 1,
+                  opacity: currentEntry.presence ? 1 : 0.4
+                }}>
+                  <Typography variant="body1" sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}>
+                    Ready for Billing
+                  </Typography>
+                  <Switch
+                    checked={Boolean(currentEntry.ready_for_billing)}
+                    onChange={(e) => setCurrentEntry({ ...currentEntry, ready_for_billing: e.target.checked })}
+                    color="warning"
+                    disabled={!currentEntry.presence}
+                  />
+                  <Typography variant="body2" color={currentEntry.ready_for_billing ? "warning.main" : "text.secondary"}>
+                    {currentEntry.ready_for_billing ? "Yes" : "No"}
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {/* Work Description */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Work Description"
+                  multiline
+                  rows={isMobile ? 2 : 3}
+                  value={currentEntry.workDescription}
+                  onChange={(e) => setCurrentEntry({ ...currentEntry, workDescription: e.target.value })}
+                  fullWidth
+                  required={currentEntry.presence}
+                  disabled={!currentEntry.presence}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ maxHeight: isMobile ? '40vh' : '25vh' }}
+                />
+              </Grid>
+
+              {/* Remarks */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Remarks (Optional)"
+                  multiline
+                  rows={isMobile ? 2 : 3}
+                  value={currentEntry.remarks || ''}
+                  onChange={(e) => setCurrentEntry({ ...currentEntry, remarks: e.target.value })}
+                  fullWidth
+                  disabled={!currentEntry.presence}
+                  size={isMobile ? "small" : "medium"}
+                />
+              </Grid>
 
               {/* Time Tracking */}
               <Grid item xs={12} sm={4}>
@@ -661,24 +503,13 @@ const DataEdit = () => {
                   label="Start Time"
                   value={currentEntry.startTime}
                   onChange={(newTime) => handleTimeChange('startTime', newTime)}
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      fullWidth 
-                      required={currentEntry.presence} 
-                      size={isMobile ? "small" : "medium"}
-                    />
-                  )}
                   disabled={!currentEntry.presence}
-                  PopperProps={{
-                    placement: isMobile ? 'bottom' : 'bottom-start',
-                    modifiers: [{
-                      name: 'preventOverflow',
-                      enabled: true,
-                      options: {
-                        boundary: document.body
-                      }
-                    }]
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: currentEntry.presence,
+                      size: isMobile ? "small" : "medium"
+                    }
                   }}
                 />
               </Grid>
@@ -687,312 +518,151 @@ const DataEdit = () => {
                   label="End Time"
                   value={currentEntry.endTime}
                   onChange={(newTime) => handleTimeChange('endTime', newTime)}
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      fullWidth 
-                      required={currentEntry.presence} 
-                      size={isMobile ? "small" : "medium"}
-                    />
-                  )}
                   disabled={!currentEntry.presence}
-                  PopperProps={{
-                    placement: isMobile ? 'bottom' : 'bottom-start',
-                    modifiers: [{
-                      name: 'preventOverflow',
-                      enabled: true,
-                      options: {
-                        boundary: document.body
-                      }
-                    }]
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: currentEntry.presence,
+                      size: isMobile ? "small" : "medium"
+                    }
                   }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="Hours Worked"
+                  label="Hours"
                   type="number"
-                  inputProps={{ 
-                    step: "0.1", 
-                    min: "0",
-                    inputMode: 'decimal', // Brings up numeric keyboard on mobile
-                    pattern: '[0-9]*(\.[0-9])?'
-                  }}
                   value={currentEntry.hours}
-                  onChange={handleHoursChange}
-                  required={currentEntry.presence}
+                  onChange={(e) => setCurrentEntry({ ...currentEntry, hours: Number(e.target.value) })}
                   fullWidth
-                  size={isMobile ? "small" : "medium"}
-                  disabled={!currentEntry.presence}
-                  helperText={`Calculated: ${currentEntry.calculatedHours} hrs`}
-                />
-              </Grid>
-
-              {/* Work Description */}
-              <Grid item xs={12}>
-                <TextField
-                  label="Work Description"
-                  multiline
-                  rows={isMobile ? 2 : 3}
-                  value={currentEntry.workDescription || ''}
-                  onChange={(e) => setCurrentEntry({...currentEntry, workDescription: e.target.value})}
-                  fullWidth
-                  size={isMobile ? "small" : "medium"}
                   required={currentEntry.presence}
                   disabled={!currentEntry.presence}
-                  sx={{
-                    '& .MuiInputBase-root': {
-                      fontSize: isMobile ? '0.875rem' : '1rem',
-                    }
-                  }}
-                />
-              </Grid>
-
-              {/* Remarks */}
-              <Grid item xs={12}>
-                <TextField
-                  label="Remarks (Optional)"
-                  multiline
-                  rows={isMobile ? 2 : 2}
-                  value={currentEntry.remarks || ''}
-                  onChange={(e) => setCurrentEntry({...currentEntry, remarks: e.target.value})}
-                  fullWidth
+                  inputProps={{ min: 0, step: 0.5 }}
                   size={isMobile ? "small" : "medium"}
-                  disabled={!currentEntry.presence}
-                  placeholder="Add any additional comments or notes here"
-                  sx={{
-                    '& .MuiInputBase-root': {
-                      fontSize: isMobile ? '0.875rem' : '1rem',
-                    }
-                  }}
                 />
               </Grid>
             </Grid>
           </LocalizationProvider>
         </DialogContent>
-        <DialogActions
-          sx={{
-            padding: isMobile ? 2 : 1.5,
-            justifyContent: 'space-between',
-            flexDirection: isMobile ? 'column-reverse' : 'row',
-            gap: isMobile ? 1 : 0
-          }}
-        >
-          <Button 
-            onClick={() => setEditDialogOpen(false)} 
-            color="primary"
-            sx={{ 
-              width: isMobile ? '100%' : 'auto',
-              padding: isMobile ? 1 : 'auto',
-              borderRadius: 1
-            }}
+
+        <DialogActions sx={{ px: 2, py: 1.5, gap: 1 }}>
+          <Button
+            startIcon={<DeleteIcon />}
+            color="error"
+            onClick={() => handleDeleteEntry(currentEntry)}
+            disabled={isSubmitting}
+            size={isMobile ? "small" : "medium"}
           >
-            Cancel
+            Delete
           </Button>
-          <Button 
-            onClick={handleUpdateEntry} 
-            color="primary" 
+          <Box sx={{ flexGrow: 1 }} />
+          {isMobile && (
+            <Button
+              variant="outlined"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={isSubmitting}
+              size="small"
+            >
+              Cancel
+            </Button>
+          )}
+          <Button
             variant="contained"
             startIcon={<SaveIcon />}
+            onClick={handleUpdateEntry}
             disabled={isSubmitting}
-            sx={{ 
-              width: isMobile ? '100%' : 'auto',
-              padding: isMobile ? 1 : 'auto',
-              borderRadius: 1
-            }}
+            size={isMobile ? "small" : "medium"}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+            {isSubmitting ? <CircularProgress size={20} color="inherit" /> : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
     );
   };
 
-  if (!staffName) {
-    return null;
-  }
-
   return (
-    <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 4 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
-      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 2 }}>
-        {/* Header */}
-        <Box sx={{ mb: 3, pb: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
-            Edit Work History
-          </Typography>
-          
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 1, sm: 0 } }}>
-            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-              Staff: {staffName}
-            </Typography>
-            <Chip 
-              label="Past 7 Days"
-              color="primary"
-              variant="outlined"
-              size="small"
-              sx={{ mt: { xs: 1, sm: 0 } }}
-            />
-          </Box>
-        </Box>
-        
-        {/* Success Alert */}
-        {success && (
-          <Alert 
-            severity="success" 
-            sx={{ mb: 3 }}
-            onClose={() => setSuccess(null)}
-          >
-            {success}
-          </Alert>
-        )}
-        
-        {/* Error message */}
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 3 }}
-            onClose={() => setError(null)}
-          >
-            {error}
-          </Alert>
-        )}
+    <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3, md: 4 }, px: { xs: 1, sm: 2 } }}>
+      <Paper elevation={isMobile ? 1 : 3} sx={{ p: { xs: 2, sm: 3 }, borderRadius: { xs: 1, sm: 2 } }}>
+        <Typography variant={isMobile ? 'h6' : 'h5'} fontWeight={600} sx={{ mb: 2 }}>
+          Edit Work Entries
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Showing entries from the past 7 days
+        </Typography>
 
-        {/* Loading indicator */}
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </Box>
-        )}
-
-        {/* Work Entries List */}
-        {!loading && workEntries.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="h6" color="textSecondary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-              No work entries found for the past week
-            </Typography>
-          </Box>
-        )}
-
-        {!loading && workEntries.length > 0 && (
-          <List sx={{ width: '100%', p: 0 }}>
+        ) : workEntries.length === 0 ? (
+          <Alert severity="info">No work entries found for the past 7 days.</Alert>
+        ) : (
+          <List disablePadding>
             {workEntries.map((entry) => (
-              <Card key={entry.id} sx={{ mb: 2, borderLeft: entry.Presence ? 'none' : '4px solid #ff9800' }}>
-                <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-                  <Grid container spacing={{ xs: 1, sm: 2 }}>
-                    <Grid item xs={12} sm={3}>
-                      <Typography variant="subtitle2" color="textSecondary">
-                        Date
+              <Card key={entry.No} variant="outlined" sx={{ mb: 1.5, borderRadius: 1 }}>
+                <CardContent sx={{ pb: 0, px: { xs: 2, sm: 3 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography variant={isMobile ? 'body1' : 'subtitle1'} fontWeight={500}>
+                        {entry.Date}
                       </Typography>
-                      <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
-                        {formatDate(entry.Date)}
+                      <Typography variant="body2" color="text.secondary">
+                        {entry.Presence ? (entry.Client || 'No client') : 'Absent'}
                       </Typography>
-                    </Grid>
-                    
-                    {entry.Presence ? (
-                      <>
-                        <Grid item xs={6} sm={3}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Client
-                          </Typography>
-                          <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
-                            {entry.Client || 'N/A'}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={6} sm={3}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Assignment
-                          </Typography>
-                          <Typography variant="body1" sx={{ wordBreak: 'break-word' }}>
-                            {entry.Assignment || 'N/A'}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={3}>
-                          <Typography variant="subtitle2" color="textSecondary">
-                            Status
-                          </Typography>
-                          <Chip 
-                            label={entry.Completion ? "Completed" : "In Progress"} 
-                            color={entry.Completion ? "success" : "warning"}
-                            size="small"
-                          />
-                        </Grid>
-                      </>
-                    ) : (
-                      <Grid item xs={12} sm={9}>
-                        <Chip 
-                          label="Absent" 
-                          color="warning"
-                          sx={{ mt: 1 }}
-                        />
-                      </Grid>
-                    )}
-                  </Grid>
-                  
-                  {entry.Presence && (
-                    <>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {entry.Completion && (
+                        <Chip label="Completed" color="success" size="small" />
+                      )}
+                      {entry.Ready_for_Billing && (
+                        <Chip label="Ready for Billing" color="warning" size="small" />
+                      )}
                       <IconButton
-                        onClick={() => handleExpandClick(entry.id)}
-                        aria-expanded={expandedId === entry.id}
-                        aria-label="show more"
                         size="small"
-                        sx={{ mt: 1 }}
+                        onClick={() => handleExpandClick(entry.No)}
+                        aria-label={expandedId === entry.No ? 'collapse' : 'expand'}
                       >
-                        {expandedId === entry.id ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                        <Typography variant="button" sx={{ ml: 1, display: { xs: 'none', sm: 'inline' } }}>
-                          {expandedId === entry.id ? "Hide Details" : "Show Details"}
-                        </Typography>
+                        {expandedId === entry.No ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                       </IconButton>
-                      
-                      <Collapse in={expandedId === entry.id} timeout="auto" unmountOnExit>
-                        <Box sx={{ mt: 2, ml: { xs: 0, sm: 1 } }}>
-                          <Grid container spacing={{ xs: 1, sm: 2 }}>
-                            <Grid item xs={6} sm={4}>
-                              <Typography variant="subtitle2" color="textSecondary">
-                                Time
-                              </Typography>
-                              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                                {formatTime(entry.Start_Time)} - {formatTime(entry.End_Time)}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={6} sm={4}>
-                              <Typography variant="subtitle2" color="textSecondary">
-                                Hours
-                              </Typography>
-                              <Typography variant="body2">
-                                {entry.Hours || 0}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12} sm={4}>
-                              <Typography variant="subtitle2" color="textSecondary">
-                                Financial Year
-                              </Typography>
-                              <Typography variant="body2">
-                                {entry.Financial_Year || 'N/A'}
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={12}>
-                              <Typography variant="subtitle2" color="textSecondary">
-                                Work Description
-                              </Typography>
-                              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                                {entry.Work_Done || 'No description provided'}
-                              </Typography>
-                            </Grid>
-                            {entry.Remark && (
-                              <Grid item xs={12}>
-                                <Typography variant="subtitle2" color="textSecondary">
-                                  Remarks
-                                </Typography>
-                                <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                                  {entry.Remark}
-                                </Typography>
-                              </Grid>
-                            )}
+                    </Box>
+                  </Box>
+
+                  <Collapse in={expandedId === entry.No} timeout="auto" unmountOnExit>
+                    <Divider sx={{ my: 1 }} />
+                    <Grid container spacing={1} sx={{ pb: 1 }}>
+                      {entry.Presence && (
+                        <>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" color="textSecondary">Assignment</Typography>
+                            <Typography variant="body2">{entry.Assignment || 'N/A'}</Typography>
                           </Grid>
-                        </Box>
-                      </Collapse>
-                    </>
-                  )}
+                          <Grid item xs={6} sm={3}>
+                            <Typography variant="subtitle2" color="textSecondary">Hours</Typography>
+                            <Typography variant="body2">{entry.Hours || 'N/A'}</Typography>
+                          </Grid>
+                          <Grid item xs={6} sm={3}>
+                            <Typography variant="subtitle2" color="textSecondary">Financial Year</Typography>
+                            <Typography variant="body2">{entry.Financial_Year || 'N/A'}</Typography>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Typography variant="subtitle2" color="textSecondary">Work Description</Typography>
+                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                              {entry.Work_Done || 'No description provided'}
+                            </Typography>
+                          </Grid>
+                          {entry.Remark && (
+                            <Grid item xs={12}>
+                              <Typography variant="subtitle2" color="textSecondary">Remarks</Typography>
+                              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>{entry.Remark}</Typography>
+                            </Grid>
+                          )}
+                        </>
+                      )}
+                    </Grid>
+                  </Collapse>
                 </CardContent>
                 <CardActions sx={{ px: { xs: 2, sm: 3 }, pb: { xs: 2, sm: 2 } }}>
                   <Button
@@ -1004,7 +674,7 @@ const DataEdit = () => {
                     Edit
                   </Button>
                   <Button
-                    startIcon={<DeleteIcon/>}
+                    startIcon={<DeleteIcon />}
                     color="error"
                     size="small"
                     onClick={() => handleDeleteEntry(entry)}
@@ -1016,14 +686,12 @@ const DataEdit = () => {
             ))}
           </List>
         )}
-        
-        {/* Actions */}
+
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', gap: 2, mt: 3 }}>
           <Button
             variant="outlined"
             startIcon={<HomeIcon />}
             onClick={() => navigate('/staffdashboard')}
-            fullWidth={false}
             sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Back to Dashboard
@@ -1032,17 +700,14 @@ const DataEdit = () => {
             variant="contained"
             color="primary"
             onClick={() => navigate('/dataentry')}
-            fullWidth={false}
             sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Add New Entry
           </Button>
         </Box>
       </Paper>
-      
-      {/* Edit Dialog */}
+
       {renderEditDialog()}
-      
     </Container>
   );
 };

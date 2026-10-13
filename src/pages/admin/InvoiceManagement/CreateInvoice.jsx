@@ -40,11 +40,9 @@ const CreateInvoice = () => {
     const [success, setSuccess] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedEntry, setSelectedEntry] = useState(null);
 
-    // Invoice form state
     const [invoiceNo, setInvoiceNo] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date());
     const [amount, setAmount] = useState('');
@@ -100,12 +98,10 @@ const CreateInvoice = () => {
         setError('');
 
         try {
-            // Format date for DB
             const formattedDate = invoiceDate instanceof Date
                 ? `${invoiceDate.getFullYear()}-${(invoiceDate.getMonth() + 1).toString().padStart(2, '0')}-${invoiceDate.getDate().toString().padStart(2, '0')}`
                 : invoiceDate;
 
-            // Insert into Invoices table
             const { error: insertError } = await supabase
                 .from('Invoices')
                 .insert([{
@@ -117,7 +113,6 @@ const CreateInvoice = () => {
 
             if (insertError) throw insertError;
 
-            // Mark the Staff Work entry as Invoiced
             const { error: updateError } = await supabase
                 .from('Staff Work')
                 .update({ Invoiced: true })
@@ -127,8 +122,6 @@ const CreateInvoice = () => {
 
             setSuccess(`Invoice ${invoiceNo} created successfully.`);
             setDialogOpen(false);
-
-            // Remove the invoiced entry from the list
             setEntries(prev => prev.filter(e => e.No !== selectedEntry.No));
             setSelectedEntry(null);
 
@@ -136,6 +129,23 @@ const CreateInvoice = () => {
             setError(`Failed to create invoice: ${err.message}`);
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleRemoveFromBilling = async (entry, e) => {
+        e.stopPropagation();
+        try {
+            const { error } = await supabase
+                .from('Staff Work')
+                .update({ Ready_for_Billing: false })
+                .eq('No', entry.No);
+
+            if (error) throw error;
+
+            setSuccess(`Entry removed from billing list.`);
+            setEntries(prev => prev.filter(en => en.No !== entry.No));
+        } catch (err) {
+            setError(`Failed to remove entry: ${err.message}`);
         }
     };
 
@@ -157,7 +167,6 @@ const CreateInvoice = () => {
                         borderRadius: { xs: 1.5, md: 2 }
                     }}
                 >
-                    {/* Header */}
                     <Box sx={{
                         display: 'flex',
                         alignItems: 'center',
@@ -195,7 +204,7 @@ const CreateInvoice = () => {
                     )}
 
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Click any row to create an invoice for that work entry.
+                        Click a row to create an invoice. Use Remove to unmark an entry from billing.
                     </Typography>
 
                     {loading ? (
@@ -216,6 +225,7 @@ const CreateInvoice = () => {
                                         <TableCell sx={{ color: 'white', fontWeight: 600 }}>Client</TableCell>
                                         <TableCell sx={{ color: 'white', fontWeight: 600 }}>Assignment</TableCell>
                                         <TableCell sx={{ color: 'white', fontWeight: 600 }}>Work Done</TableCell>
+                                        <TableCell sx={{ color: 'white', fontWeight: 600 }}>Action</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -231,6 +241,16 @@ const CreateInvoice = () => {
                                             <TableCell>{entry.Client}</TableCell>
                                             <TableCell>{entry.Assignment}</TableCell>
                                             <TableCell>{entry.Work_Done}</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="error"
+                                                    size="small"
+                                                    onClick={(e) => handleRemoveFromBilling(entry, e)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -251,7 +271,6 @@ const CreateInvoice = () => {
                     )}
                 </Paper>
 
-                {/* Invoice Creation Dialog */}
                 <Dialog
                     open={dialogOpen}
                     onClose={handleDialogClose}

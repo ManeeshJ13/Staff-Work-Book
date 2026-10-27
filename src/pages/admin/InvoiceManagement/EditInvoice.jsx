@@ -424,7 +424,7 @@ const EditInvoice = () => {
                     <DialogTitle>Delete Invoice</DialogTitle>
                     <DialogContent>
                         <DialogContentText>
-                            Are you sure you want to delete invoice <strong>{invoiceToDelete?.Invoice_No}</strong>? 
+                            Are you sure you want to delete invoice <strong>{invoiceToDelete?.Invoice_No}</strong>?     
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>

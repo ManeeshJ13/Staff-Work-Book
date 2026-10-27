@@ -76,7 +76,7 @@ const DataEdit = () => {
 
   const getOneWeekAgo = useCallback(() => {
     const date = new Date();
-    date.setDate(date.getDate() - 7);
+    date.setDate(date.getDate() - 30);
     return date;
   }, []);
 
@@ -587,7 +587,7 @@ const DataEdit = () => {
           Edit Work Entries
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Showing entries from the past 7 days
+          Showing entries from the past 30 days
         </Typography>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -598,7 +598,7 @@ const DataEdit = () => {
             <CircularProgress />
           </Box>
         ) : workEntries.length === 0 ? (
-          <Alert severity="info">No work entries found for the past 7 days.</Alert>
+          <Alert severity="info">No work entries found for the past 30 days.</Alert>
         ) : (
           <List disablePadding>
             {workEntries.map((entry) => (

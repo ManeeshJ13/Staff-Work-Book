@@ -5,6 +5,7 @@ import withAuth from "../../components/withAuth";
 import * as XLSX from 'xlsx';
 import { financialYears } from "../../lib/dataLists";
 import { getStaffWork } from "../../lib/staffWorkCache";
+import { clearStaffWorkCache } from "../../lib/staffWorkCache";
 import {
   Table,
   TableBody,

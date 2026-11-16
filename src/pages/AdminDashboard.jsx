@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { getStaffWork } from '../lib/staffWorkCache';
+import { clearStaffWorkCache } from '../lib/staffWorkCache';
 
 // Material-UI imports
 import {

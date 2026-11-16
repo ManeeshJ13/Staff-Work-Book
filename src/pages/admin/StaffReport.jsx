@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
 import withAuth from "../../components/withAuth";
 import * as XLSX from 'xlsx';
 import { financialYears } from "../../lib/dataLists";
+import { getStaffWork } from "../../lib/staffWorkCache";
 import {
   Table,
   TableBody,
@@ -36,7 +37,8 @@ import {
   DialogContent,
   DialogActions,
   DialogContentText,
-  Snackbar
+  Snackbar,
+  TablePagination
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -81,6 +83,15 @@ const StaffReport = () => {
   const [selectedFinancialYears, setSelectedFinancialYears] = useState([]);
   const [dateFrom, setDateFrom] = useState(null);
   const [dateTo, setDateTo] = useState(null);
+
+  // Pagination (renders only one page of rows instead of all rows)
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
+
+  useEffect(() => { setPage(0); }, [
+    selectedStaff, selectedClients, selectedGroups,
+    selectedAssignments, selectedFinancialYears, dateFrom, dateTo
+  ]);
   
   // Drawer control (replacing dialog for mobile)
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -134,44 +145,31 @@ const StaffReport = () => {
   }, []);
 
   // Fetch staff work data and extract unique dropdown values
+    // Fetch staff work data (cached in IndexedDB) and extract unique dropdown values
   const fetchStaffWorkData = async () => {
     try {
-      //fetching alll the data using pagination
-      let allData = [];
-      let from = 0;
-      let limit = 1000;
-      let hasMore = true;
+      // Cached fetch: full parallel download on first run, delta sync afterwards
+      const cachedRows = await getStaffWork();
 
-      while (hasMore) {
-  const { data, error } = await supabase
-    .from("Staff Work")
-    .select("*")
-    .order("Date", { ascending: false })
-    .range(from, from + limit - 1);
+      // Copy before sorting so the cached array is never mutated; newest date first
+      const allData = [...cachedRows].sort((a, b) => {
+        const da = a.Date || '';
+        const db = b.Date || '';
+        return da < db ? 1 : da > db ? -1 : 0;
+      });
 
-  if (error) throw error;
-
-  if (data && data.length > 0) {
-    allData = [...allData, ...data];
-    from += limit;
-    hasMore = data.length === limit;
-  } else {
-    hasMore = false;
-  }
-}
-
-      //filter out Data when absent
-      const filteredByPresence = allData ? allData.filter (work => work.Presence !== false) : [];
+      // Filter out data when absent
+      const filteredByPresence = allData.filter(work => work.Presence !== false);
       setStaffWorkData(filteredByPresence);
       setFilteredData(filteredByPresence);
-    
+
       // Extract unique values for dropdown lists from Staff Work table
       const uniqueStaff = [...new Set(filteredByPresence.map(item => item.Name).filter(Boolean))];
       const uniqueAssignments = [...new Set(filteredByPresence.map(item => item.Assignment).filter(Boolean))];
       const uniqueFinancialYears = [...new Set(
         filteredByPresence
-        .map(item => item.Financial_Year)
-        .filter(year => year && financialYears.includes(year))
+          .map(item => item.Financial_Year)
+          .filter(year => year && financialYears.includes(year))
       )];
 
       // Sort lists alphabetically
@@ -181,7 +179,7 @@ const StaffReport = () => {
 
       // Fetch hourly rates for the unique staff found
       await fetchStaffHourlyRates(uniqueStaff);
-    
+
       // Calculate total hours
       let hoursSum = 0;
       filteredByPresence.forEach(work => {
@@ -194,7 +192,7 @@ const StaffReport = () => {
       console.error("Error fetching staff work data:", err);
       throw err;
     }
-    };
+  };
 
 
   // Fetch hourly rates for the staff found in Staff Work table
@@ -262,10 +260,15 @@ const StaffReport = () => {
   };
 
   // Get group for a client from the clients data
+  const clientGroupMap = useMemo(() => {
+    const m = new Map();
+    clientsData.forEach(c => m.set(c.Client_Name, c.Group));
+    return m;
+  }, [clientsData]);
+
   const getClientGroup = (clientName) => {
     if (!clientName) return "N/A";
-    const client = clientsData.find(client => client.Client_Name === clientName);
-    return client && client.Group ? client.Group : "N/A";
+    return clientGroupMap.get(clientName) || "N/A";
   };
 
 
@@ -399,8 +402,6 @@ const StaffReport = () => {
     if (!selectedRecord) return;
 
     // ADD THIS DEBUG LOG
-  console.log('Selected Record:', selectedRecord);
-  console.log('Record ID:', selectedRecord.No);
   
   // Check if ID exists
   if (!selectedRecord.No) {
@@ -462,13 +463,11 @@ const StaffReport = () => {
     if (!staffName || !hours) return NaN;
     
     const staffRate = staffHourlyRates.find(staff => staff.Staff_Name === staffName);
-    console.log('Staff:', staffName, 'Rate:', staffRate, 'Hours:', hours); 
 
     
     if (!staffRate || !staffRate.hourly_rate) return NaN;
 
     const cost=parseFloat(staffRate.hourly_rate) * parseFloat(hours);
-    console.log('Calculated Cose:', cost) 
     return cost;
   };
 
@@ -921,9 +920,9 @@ return (
         </TableRow>
       </TableHead>
       <TableBody>
-        {filteredData.map((work, index) => (
+        {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((work, index) => (
           <TableRow 
-            key={work.id || index}
+            key={work.No ?? index}
             hover
             sx={{ '&:nth-of-type(odd)': { backgroundColor: 'action.hover' } }}
           >
@@ -972,6 +971,15 @@ return (
       </TableBody>
     </Table>
   </TableContainer>
+  <TablePagination
+    component="div"
+    count={filteredData.length}
+    page={page}
+    onPageChange={(e, newPage) => setPage(newPage)}
+    rowsPerPage={rowsPerPage}
+    onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+    rowsPerPageOptions={[50, 100, 250, 500]}
+  />
 </Box>
 
       )}

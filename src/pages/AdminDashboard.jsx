@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { getStaffWork } from '../lib/staffWorkCache';
 
 // Material-UI imports
 import {
@@ -54,6 +55,7 @@ const AdminLayout = () => {
 
   // Check if we're on the home page
   useEffect(() => {
+     getStaffWork().catch(() => {}); // warm the cache in the background
     const path = location.pathname;
     setIsHome(path === '/admindash' || path === '/admin');
     
@@ -67,10 +69,11 @@ const AdminLayout = () => {
   }, [location.pathname]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('isAdmin');
-    navigate('/signin');
-  };
+  await clearStaffWorkCache().catch(() => {});
+  await supabase.auth.signOut();
+  localStorage.removeItem('isAdmin');
+  navigate('/signin');
+};
 
   const toggleDrawer = (open) => (event) => {
     if (

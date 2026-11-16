@@ -104,6 +104,7 @@ const SignIn = () => {
       return;
     }
 
+    clearStaffWorkCache().catch(() => {});
     localStorage.setItem("currentStaff", name);
     navigate("/staffdashboard");
   };
